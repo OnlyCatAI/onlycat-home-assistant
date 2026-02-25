@@ -109,16 +109,21 @@ class OnlyCatLastImage(ImageEntity):
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
     @property
+    def history(self) -> list[Event]:
+        """Return the image history."""
+        return self._history
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         if not self._history:
             return {}
         return {
-            "image_history": [self._get_url_for_event(ev) for ev in self._history],
+            "image_history": [self.get_url_for_event(ev) for ev in self._history],
             "selected_index": self._selected_index,
         }
 
-    def _get_url_for_event(self, event: Event) -> str:
+    def get_url_for_event(self, event: Event) -> str:
         """Get the URL for a specific event."""
         if not event or not event.event_id:
             return ""
@@ -154,7 +159,7 @@ class OnlyCatLastImage(ImageEntity):
             idx = 0
 
         event = self._history[idx]
-        self._attr_image_url = self._get_url_for_event(event)
+        self._attr_image_url = self.get_url_for_event(event)
         self._attr_image_last_updated = event.timestamp
         self._cached_image = None
 

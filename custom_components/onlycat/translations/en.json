@@ -54,7 +54,10 @@
         },
         "select": {
             "onlycat_policy_select": {
-                "name": "Door Policy"
+                "name": "Access Policy"
+            },
+            "onlycat_history_select": {
+                "name": "Image History Index"
             }
         },
         "button": {
