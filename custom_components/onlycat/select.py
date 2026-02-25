@@ -37,13 +37,21 @@ ENTITY_DESCRIPTION = SelectEntityDescription(
 )
 
 
+HISTORY_SELECT_DESCRIPTION = SelectEntityDescription(
+    key="OnlyCat_history_select",
+    name="Image History Index",
+    icon="mdi:image-multiple",
+    translation_key="onlycat_history_select",
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
     entry: OnlyCatConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the select platform."""
-    entities = [
+    entities: list[SelectEntity] = [
         OnlyCatPolicySelect(
             coordinator=entry.runtime_data.coordinator,
             device=device,
@@ -52,6 +60,17 @@ async def async_setup_entry(
         )
         for device in entry.runtime_data.devices
     ]
+
+    entities.extend(
+        [
+            OnlyCatImageHistorySelect(
+                device=device,
+                entry=entry,
+            )
+            for device in entry.runtime_data.devices
+        ]
+    )
+
     async_add_entities(entities)
     entry.runtime_data.coordinator.async_update_listeners()
 
@@ -148,3 +167,67 @@ class OnlyCatPolicySelect(CoordinatorEntity, SelectEntity):
             "activateDeviceTransitPolicy",
             {"deviceId": self.device.device_id, "deviceTransitPolicyId": policy_id},
         )
+
+
+HISTORY_SELECT_OPTIONS: list[str] = [
+    "Neuestes",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+]
+
+
+class OnlyCatImageHistorySelect(SelectEntity):
+    """Select the history image to display."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_translation_key = "onlycat_history_select"
+    _attr_options = HISTORY_SELECT_OPTIONS
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info to map to a device."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.device.device_id)},
+            name=self.device.description,
+            serial_number=self.device.device_id,
+        )
+
+    def __init__(
+        self,
+        device: Device,
+        entry: OnlyCatConfigEntry,
+    ) -> None:
+        """Initialize the history selector."""
+        self.device = device
+        self.entry = entry
+        self.entity_description = HISTORY_SELECT_DESCRIPTION
+        self._attr_unique_id = (
+            device.device_id.replace("-", "_").lower() + "_history_select"
+        )
+        self.entity_id = "select." + self._attr_unique_id
+        self._attr_current_option = "Neuestes"
+
+    async def async_select_option(self, option: str) -> None:
+        """Select a history index."""
+        self._attr_current_option = option
+        self.async_write_ha_state()
+
+        # Find the image entity and update it
+        image_entity = self.entry.runtime_data.image_entities.get(self.device.device_id)
+        if image_entity:
+            index = 0
+            if option != "Neuestes":
+                try:
+                    index = int(option)
+                except ValueError:
+                    index = 0
+            await image_entity.async_set_history_index(index)

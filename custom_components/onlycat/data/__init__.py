@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -30,3 +30,4 @@ class OnlyCatData:
     pets: list[Pet]
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
+    image_entities: dict[str, Any] = field(default_factory=dict)
