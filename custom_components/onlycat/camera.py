@@ -5,7 +5,11 @@ import datetime as dt
 import logging
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.camera import Camera, CameraEntityDescription
+from homeassistant.components.camera import (
+    Camera,
+    CameraEntityDescription,
+    CameraEntityFeature,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -76,6 +80,7 @@ class OnlyCatLastVideo(Camera):
     """OnlyCat camera class for video history."""
 
     _attr_has_entity_name = True
+    _attr_supported_features = CameraEntityFeature.STREAM
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -118,7 +123,7 @@ class OnlyCatLastVideo(Camera):
         }
 
     async def async_camera_image(
-        self, width: int | None = None, height: int | None = None
+        self, _width: int | None = None, _height: int | None = None
     ) -> bytes | None:
         """Return a still image response from the camera."""
         # Use the photo from the same event as the thumbnail
@@ -129,7 +134,6 @@ class OnlyCatLastVideo(Camera):
         if idx >= len(self._history):
             idx = 0
 
-        event = self._history[idx]
         image_entities = self.device.config_entry.runtime_data.image_entities
         image_entity: OnlyCatLastImage = image_entities.get(self.device.device_id)
 

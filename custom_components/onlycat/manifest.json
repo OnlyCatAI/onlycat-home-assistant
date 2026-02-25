@@ -12,7 +12,8 @@
     "python-socketio==5.16.1"
   ],
   "after_dependencies": [
-    "media_source"
+    "media_source",
+    "stream"
   ],
   "version": "1.0.0"
 }
