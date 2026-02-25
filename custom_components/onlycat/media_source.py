@@ -41,7 +41,7 @@ class OnlyCatMediaSource(MediaSource):
         self, item: MediaSourceItem
     ) -> BrowseMediaSource:
         """Browse media."""
-        if item.identifier is None:
+        if item.identifier in [None, ""]:
             # Root level: list devices
             return self._browse_root()
 
@@ -73,7 +73,7 @@ class OnlyCatMediaSource(MediaSource):
 
         return BrowseMediaSource(
             domain=DOMAIN,
-            identifier=None,
+            identifier="",
             media_class=MediaClass.DIRECTORY,
             media_content_type=MediaType.CHANNELS,
             title="OnlyCat",
@@ -97,7 +97,11 @@ class OnlyCatMediaSource(MediaSource):
             for i, event in enumerate(image_entity.history):
                 # We use the public get_url_for_event
                 url = image_entity.get_url_for_event(event)
-                timestamp_str = event.timestamp.strftime("%d.%m %H:%M:%S")
+                if event.timestamp:
+                    timestamp_str = event.timestamp.strftime("%d.%m %H:%M:%S")
+                else:
+                    timestamp_str = "Unbekannte Zeit"
+
                 if i > 0:
                     title = f"Ereignis {i} - {timestamp_str}"
                 else:
