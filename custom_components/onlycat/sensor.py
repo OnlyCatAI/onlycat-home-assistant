@@ -100,6 +100,8 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
     def update_sensor(self) -> None:
         """Update the sensor state."""
         self.policy = self.device.device_transit_policies.get(self.policy_id)
+        if not self.policy:
+            return
         self._attr_extra_state_attributes = {
             "policy": self.policy.to_dict(),
             "policy_json": json.dumps(self.policy.to_dict()),
