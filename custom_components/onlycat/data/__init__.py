@@ -31,3 +31,4 @@ class OnlyCatData:
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
     image_entities: dict[str, Any] = field(default_factory=dict)
+    camera_entities: dict[str, Any] = field(default_factory=dict)

@@ -221,13 +221,20 @@ class OnlyCatImageHistorySelect(SelectEntity):
         self._attr_current_option = option
         self.async_write_ha_state()
 
-        # Find the image entity and update it
+        # Find the image and camera entities and update them
         image_entity = self.entry.runtime_data.image_entities.get(self.device.device_id)
+        camera_entity = self.entry.runtime_data.camera_entities.get(
+            self.device.device_id
+        )
+
+        index = 0
+        if option != "Neuestes":
+            try:
+                index = int(option)
+            except ValueError:
+                index = 0
+
         if image_entity:
-            index = 0
-            if option != "Neuestes":
-                try:
-                    index = int(option)
-                except ValueError:
-                    index = 0
             await image_entity.async_set_history_index(index)
+        if camera_entity:
+            await camera_entity.async_set_history_index(index)

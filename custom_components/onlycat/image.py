@@ -138,6 +138,12 @@ class OnlyCatLastImage(ImageEntity):
         device_id = event.device_id or self.device.device_id
         return f"{IMAGE_BASEURL}{device_id}/{event.event_id}/{int(frame_to_show)}"
 
+    def get_video_url_for_event(self, event: Event) -> str:
+        """Get the video URL for a specific event."""
+        if not event or not event.access_token:
+            return ""
+        return f"https://gateway.onlycat.com/sharing/{event.access_token}"
+
     async def async_initialize_history(self, events: list[Event]) -> None:
         """Initialize history with fetched events."""
         self._history = events[:MAX_HISTORY_SIZE]
