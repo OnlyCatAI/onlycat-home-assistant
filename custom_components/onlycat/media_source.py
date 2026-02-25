@@ -34,19 +34,24 @@ class OnlyCatMediaSource(MediaSource):
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a URL."""
-        # The item.identifier is the URL itself or we reconstruct it
+        _LOGGER.debug("Resolving media: %s", item.identifier)
         return PlayMedia(item.identifier, "image/jpeg")
 
     async def async_browse_media(
         self, item: MediaSourceItem
     ) -> BrowseMediaSource:
         """Browse media."""
-        if item.identifier in [None, ""]:
-            # Root level: list devices
-            return self._browse_root()
+        _LOGGER.debug("Browsing media: identifier=%s", item.identifier)
+        try:
+            if item.identifier in [None, "", "root"]:
+                # Root level: list devices
+                return self._browse_root()
 
-        # Device level: list 10 images
-        return self._browse_device(item.identifier)
+            # Device level: list 10 images
+            return self._browse_device(item.identifier)
+        except Exception:
+            _LOGGER.exception("Error browsing OnlyCat media")
+            raise
 
     @callback
     def _browse_root(self) -> BrowseMediaSource:
@@ -56,30 +61,26 @@ class OnlyCatMediaSource(MediaSource):
         for entry in self.hass.config_entries.async_entries(DOMAIN):
             if not hasattr(entry, "runtime_data"):
                 continue
-            children.extend(
-                [
-                    BrowseMediaSource(
-                        domain=DOMAIN,
-                        identifier=device.device_id,
-                        media_class=MediaClass.DIRECTORY,
-                        media_content_type=MediaType.CHANNELS,
-                        title=device.description or device.device_id,
-                        can_browse=True,
-                        can_play=False,
-                    )
-                    for device in entry.runtime_data.devices
-                ]
-            )
+
+            children.extend([
+                BrowseMediaSource(
+                    domain=DOMAIN,
+                    identifier=device.device_id,
+                    media_class=MediaClass.DIRECTORY,
+                    media_content_type=MediaType.ALBUM,
+                    title=device.description or device.device_id,
+                )
+                for device in entry.runtime_data.devices
+            ])
 
         return BrowseMediaSource(
             domain=DOMAIN,
-            identifier="",
+            identifier="root",
             media_class=MediaClass.DIRECTORY,
-            media_content_type=MediaType.CHANNELS,
+            media_content_type=MediaType.ALBUM,
             title="OnlyCat",
-            can_browse=True,
-            can_play=False,
             children=children,
+            children_media_class=MediaClass.DIRECTORY,
         )
 
     @callback
@@ -88,24 +89,31 @@ class OnlyCatMediaSource(MediaSource):
         children = []
         # Find the image entity for this device
         image_entity = None
+        device_name = device_id
         for entry in self.hass.config_entries.async_entries(DOMAIN):
             if hasattr(entry, "runtime_data"):
                 image_entity = entry.runtime_data.image_entities.get(device_id)
                 if image_entity:
+                    device_name = image_entity.device.description or device_id
                     break
-        if image_entity and hasattr(image_entity, "history"):
-            for i, event in enumerate(image_entity.history):
-                # We use the public get_url_for_event
-                url = image_entity.get_url_for_event(event)
-                if event.timestamp:
-                    timestamp_str = event.timestamp.strftime("%d.%m %H:%M:%S")
-                else:
-                    timestamp_str = "Unbekannte Zeit"
 
+        if image_entity and hasattr(image_entity, "history"):
+            _LOGGER.debug(
+                "Found history for %s: %d items",
+                device_id,
+                len(image_entity.history),
+            )
+            for i, event in enumerate(image_entity.history):
+                url = image_entity.get_url_for_event(event)
+                timestamp_str = (
+                    event.timestamp.strftime("%d.%m %H:%M:%S")
+                    if event.timestamp
+                    else "Unbekannt"
+                )
                 if i > 0:
                     title = f"Ereignis {i} - {timestamp_str}"
                 else:
-                    title = f"Neuestes Ereignis - {timestamp_str}"
+                    title = f"Neuestes - {timestamp_str}"
 
                 children.append(
                     BrowseMediaSource(
@@ -114,19 +122,18 @@ class OnlyCatMediaSource(MediaSource):
                         media_class=MediaClass.IMAGE,
                         media_content_type=MediaType.IMAGE,
                         title=title,
-                        can_browse=False,
-                        can_play=True,
                         thumbnail=url,
                     )
                 )
+        else:
+            _LOGGER.debug("No history or entity found for device %s", device_id)
 
         return BrowseMediaSource(
             domain=DOMAIN,
             identifier=device_id,
             media_class=MediaClass.DIRECTORY,
-            media_content_type=MediaType.IMAGE,
-            title="Letzte Ereignisse",
-            can_browse=True,
-            can_play=False,
+            media_content_type=MediaType.ALBUM,
+            title=device_name,
             children=children,
+            children_media_class=MediaClass.IMAGE,
         )

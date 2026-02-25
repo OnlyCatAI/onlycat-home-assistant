@@ -291,10 +291,12 @@ class Rule:
 
     def to_dict(self) -> dict:
         """Return a custom dict of Rule."""
-        data = {
-            "criteria": self.criteria.to_dict(),
-            "action": self.action.to_dict(),
-        }
+        data = {}
+        if self.criteria:
+            data["criteria"] = self.criteria.to_dict()
+        if self.action:
+            data["action"] = self.action.to_dict()
+
         if self.enabled is not None:
             data["enabled"] = self.enabled
         if self.description:
@@ -316,12 +318,17 @@ class TransitPolicy:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-        rules = api_policy.get("rules")
+        rules_api = api_policy.get("rules", [])
+        rules = [
+            Rule.from_api_rule(rule)
+            for rule in rules_api
+            if Rule.from_api_rule(rule) is not None
+        ]
 
         return cls(
-            rules=[Rule.from_api_rule(rule) for rule in rules] if rules else None,
-            idle_lock=api_policy.get("idleLock"),
-            idle_lock_battery=api_policy.get("idleLockBattery"),
+            rules=rules or [],
+            idle_lock=api_policy.get("idleLock", False),
+            idle_lock_battery=api_policy.get("idleLockBattery", False),
             ux=api_policy.get("ux"),
         )
 
