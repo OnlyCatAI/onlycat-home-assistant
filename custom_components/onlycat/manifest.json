@@ -8,6 +8,11 @@
   "documentation": "https://github.com/OnlyCatAI/onlycat-home-assistant",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/OnlyCatAI/onlycat-home-assistant/issues",
-  "requirements": ["python-socketio==5.16.1"],
+  "requirements": [
+    "python-socketio==5.16.1"
+  ],
+  "after_dependencies": [
+    "media_source"
+  ],
   "version": "1.0.0"
 }

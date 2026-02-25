@@ -69,7 +69,7 @@ async def async_setup_entry(
         ]
         device_events = [e for e in device_events if e is not None]
         if device_events:
-            await entity.async_initialize_history(device_events[:MAX_HISTORY_SIZE])
+            await entity.async_initialize_history(device_events)
 
 
 class OnlyCatLastImage(ImageEntity):

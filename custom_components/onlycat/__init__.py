@@ -32,7 +32,6 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.IMAGE,
     Platform.SENSOR,
-    Platform.MEDIA_SOURCE,
 ]
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,12 +132,14 @@ async def _initialize_devices(entry: OnlyCatConfigEntry) -> None:
 
 async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
     for device in entry.runtime_data.devices:
-        events = [
+        device_events = [
             Event.from_api_response(event)
             for event in await entry.runtime_data.client.send_message(
                 "getDeviceEvents", {"deviceId": device.device_id}
             )
         ]
+        device_events = [e for e in device_events if e is not None]
+
         rfids = await entry.runtime_data.client.send_message(
             "getLastSeenRfidCodesByDevice", {"deviceId": device.device_id}
         )
@@ -161,7 +162,7 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             entry.runtime_data.pets.append(pet)
 
             # Get last seen event to determine current presence state
-            for event in events:
+            for event in device_events:
                 if event.rfid_codes and pet.rfid_code in event.rfid_codes:
                     pet.last_seen_event = event
                     break
