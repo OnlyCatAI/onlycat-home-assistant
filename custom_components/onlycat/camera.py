@@ -33,7 +33,6 @@ ENTITY_DESCRIPTION = CameraEntityDescription(
 )
 
 IMAGE_BASEURL = "https://gateway.onlycat.com/events/"
-VIDEO_BASEURL = "https://gateway.onlycat.com/sharing/"
 MAX_HISTORY_SIZE = 11  # Same as image.py
 
 
@@ -152,10 +151,14 @@ class OnlyCatLastVideo(Camera):
             idx = 0
 
         event = self._history[idx]
-        if not event or not event.access_token:
+        if not event or not event.access_token or not event.device_id or not event.event_id:
             return None
 
-        return f"{VIDEO_BASEURL}{event.access_token}"
+        # Return the raw video stream URL instead of the HTML sharing page
+        return (
+            f"https://gateway.onlycat.com/sharing/video/{event.device_id}/"
+            f"{event.event_id}?t={event.access_token}"
+        )
 
     @callback
     def async_initialize_history(self, events: list[Event]) -> None:
