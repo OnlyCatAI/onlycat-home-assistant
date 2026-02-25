@@ -83,7 +83,9 @@ class OnlyCatApiClient:
     def add_event_listener(self, event: str, callback: Any) -> None:
         """Add an event listener."""
         self._listeners[event].append(callback)
-        _LOGGER.debug("Added event listener for event: %s", event)
+        _LOGGER.debug(
+            "Added event listener for event %s: %s", event, callback.__module__
+        )
 
     async def handle_event(self, event: str, *args: Any) -> None:
         """Handle an event."""

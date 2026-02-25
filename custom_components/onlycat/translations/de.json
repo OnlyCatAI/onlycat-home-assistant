@@ -6,6 +6,15 @@
                 "data": {
                     "token": "OnlyCat Device Token"
                 }
+            },
+            "reconfigure": {
+                "description": "OnlyCat Integration neu konfigurieren - Einstellungen aktualisieren.",
+                "data": {
+                    "ignore_flap_motion_rules": "Ignoriere Regln basierend auf Klappenbewegungen",
+                    "ignore_motion_sensor_rules": "Ignoriere Regeln basierend auf Bewegungssensoren",
+                    "enable_detailed_metrics": "Erweiterte Metriken einschalten (~50 weitere Sensoren)",
+                    "poll_interval_hours": "Aktuallisierungsintervall in Stunden für Fehler- und Metriksensoren"
+                }
             }
         },
         "error": {
@@ -30,6 +39,9 @@
             },
             "onlycat_lock_sensor": {
                 "name": "Verriegelung"
+            },
+            "onlycat_error_sensor": {
+                "name": "Fehlermeldungen"
             }
         },
         "device_tracker": {
@@ -48,6 +60,11 @@
             },
             "onlycat_unlock_button": {
                 "name": "Aufschließen"
+            }
+        },
+        "image": {
+            "onlycat_event_image": {
+                "name": "Letztes Bild"
             }
         }
     }

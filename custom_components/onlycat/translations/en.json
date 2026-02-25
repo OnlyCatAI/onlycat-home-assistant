@@ -6,6 +6,15 @@
                 "data": {
                     "token": "OnlyCat Device Token"
                 }
+            },
+            "reconfigure": {
+                "description": "Reconfigure OnlyCat integration. Update settings.",
+                "data": {
+                    "ignore_flap_motion_rules": "Ignore rules based on flap motion",
+                    "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
+                    "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more sensors)",
+                    "poll_interval_hours": "Polling interval in hours for error and metroc sensors"
+                }
             }
         },
         "error": {
@@ -30,6 +39,9 @@
             },
             "onlycat_lock_sensor": {
                 "name": "Lock state"
+            },
+            "onlycat_error_sensor": {
+                "name": "Errors"
             }
         },
         "device_tracker": {
@@ -48,6 +60,11 @@
             },
             "onlycat_unlock_button": {
                 "name": "Unlock"
+            }
+        },
+        "image": {
+            "onlycat_event_image": {
+                "name": "Latest Event Image"
             }
         }
     }

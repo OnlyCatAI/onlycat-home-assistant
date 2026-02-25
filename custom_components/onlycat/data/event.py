@@ -45,6 +45,36 @@ class EventClassification(Enum):
         return cls.UNKNOWN
 
 
+class EventFlapstate(Enum):
+    """Enum representing the flap state during an OnlyCat flap event."""
+
+    CLOSED = 0
+    OPEN_INWARD = 1
+    OPEN_OUTWARD = 2
+    INVALID = 3
+
+    @classmethod
+    def _missing_(cls, value: str) -> EventFlapstate:
+        """Handle missing enum values in case of API extensions."""
+        _LOGGER.warning("Unknown event flap state: %s", value)
+        return cls.UNKNOWN
+
+
+class EventMotionstate(Enum):
+    """Enum representing the motion sensor state during an OnlyCat flap event."""
+
+    UNKNOWN = 0
+    NONE = 1
+    INDOOR = 2
+    OUTDOOR = 3
+
+    @classmethod
+    def _missing_(cls, value: str) -> EventMotionstate:
+        """Handle missing enum values in case of API extensions."""
+        _LOGGER.warning("Unknown event motion sensor state: %s", value)
+        return cls.UNKNOWN
+
+
 @dataclass
 class Event:
     """Data representing an OnlyCat flap event."""

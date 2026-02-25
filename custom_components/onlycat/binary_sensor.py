@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from .binary_sensor_connectivity import OnlyCatConnectionSensor
 from .binary_sensor_contraband import OnlyCatContrabandSensor
+from .binary_sensor_device_errors import OnlyCatErrorSensor
 from .binary_sensor_event import OnlyCatEventSensor
 from .binary_sensor_lock import OnlyCatLockSensor
 
@@ -42,5 +43,11 @@ async def async_setup_entry(
                 device=device,
                 api_client=entry.runtime_data.client,
             ),
+            OnlyCatErrorSensor(
+                device=device,
+                api_client=entry.runtime_data.client,
+                coordinator=entry.runtime_data.coordinator,
+            ),
         )
     )
+    entry.runtime_data.coordinator.async_update_listeners()

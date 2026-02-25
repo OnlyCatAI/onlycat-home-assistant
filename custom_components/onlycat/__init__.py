@@ -15,6 +15,7 @@ from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OnlyCatApiClient
+from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device, DeviceUpdate
 from .data.event import Event
@@ -30,6 +31,7 @@ PLATFORMS: list[Platform] = [
     Platform.SELECT,
     Platform.DEVICE_TRACKER,
     Platform.BUTTON,
+    Platform.IMAGE,
 ]
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,18 +42,25 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
+    default_settings = {
+        "ignore_flap_motion_rules": False,
+        "ignore_motion_sensor_rules": False,
+        "poll_interval_hours": 6,
+    }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(
-            token=entry.data["token"],
-            session=async_get_clientsession(hass),
+            token=entry.data["token"], session=async_get_clientsession(hass)
         ),
         devices=[],
         pets=[],
+        settings=entry.data.get("settings", default_settings),
+        coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
     )
     await entry.runtime_data.client.connect()
 
     await _initialize_devices(entry)
     await _initialize_pets(entry)
+    await entry.runtime_data.coordinator.async_config_entry_first_refresh()
 
     async def refresh_subscriptions(args: dict | None) -> None:
         _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)
@@ -125,6 +134,7 @@ async def _initialize_devices(entry: OnlyCatConfigEntry) -> None:
         entry.runtime_data.devices.append(device)
 
     for device in entry.runtime_data.devices:
+        device.settings = entry.runtime_data.settings
         if device.device_transit_policy_id is not None:
             await _retrieve_current_transit_policy(entry, device)
 
@@ -157,7 +167,10 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
         )
         for rfid in rfids:
             rfid_code = rfid["rfidCode"]
-            last_seen = datetime.fromisoformat(rfid["timestamp"])
+            try:
+                last_seen = datetime.fromisoformat(rfid["timestamp"])
+            except TypeError:
+                last_seen = None
             rfid_profile = await entry.runtime_data.client.send_message(
                 "getRfidProfile", {"rfidCode": rfid_code}
             )
@@ -165,7 +178,7 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             pet = Pet(device, rfid_code, last_seen, label=label)
             _LOGGER.debug(
                 "Found Pet %s for device %s",
-                label if label else rfid_code,
+                label or rfid_code,
                 device.device_id,
             )
             entry.runtime_data.pets.append(pet)

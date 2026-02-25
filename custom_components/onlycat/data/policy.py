@@ -8,7 +8,13 @@ from datetime import datetime, timedelta, tzinfo
 from enum import Enum, StrEnum
 from typing import TYPE_CHECKING
 
-from .event import Event, EventClassification, EventTriggerSource
+from .event import (
+    Event,
+    EventClassification,
+    EventFlapstate,
+    EventMotionstate,
+    EventTriggerSource,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,13 +24,13 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-def map_api_list_or_obj(api_obj: list | object, mapper: Callable) -> list | None:
+def map_api_list_or_obj(api_obj: list | object, mapper: Callable) -> list:
     """Map a single object or list of objects from the API using the mapper function."""
     if isinstance(api_obj, list):
         return [mapper(obj) for obj in api_obj]
     if api_obj:
         return [mapper(api_obj)]
-    return None
+    return []
 
 
 class PolicyResult(Enum):
@@ -133,7 +139,9 @@ class RuleCriteria:
     event_classifications: list[EventClassification]
     time_ranges: list[TimeRange]
     rfid_codes: list[str]
-    rfid_timeout: int
+    rfid_timeout: int | None
+    flap_states: list[EventFlapstate]
+    motion_sensor_states: list[EventMotionstate]
 
     @classmethod
     def from_api_response(cls, api_criteria: dict) -> RuleCriteria | None:
@@ -142,15 +150,20 @@ class RuleCriteria:
             return None
 
         trigger_source = map_api_list_or_obj(
-            api_criteria.get("eventTriggerSource"), lambda x: EventTriggerSource(x)
+            api_criteria.get("eventTriggerSource"), EventTriggerSource
         )
         classification = map_api_list_or_obj(
-            api_criteria.get("eventClassification"), lambda x: EventClassification(x)
+            api_criteria.get("eventClassification"), EventClassification
         )
         time_range = map_api_list_or_obj(
-            api_criteria.get("timeRange"), lambda x: TimeRange.from_api_response(x)
+            api_criteria.get("timeRange"), TimeRange.from_api_response
         )
         rfid_code = map_api_list_or_obj(api_criteria.get("rfidCode"), lambda x: x)
+
+        flap_states = map_api_list_or_obj(api_criteria.get("flapState"), EventFlapstate)
+        motion_states = map_api_list_or_obj(
+            api_criteria.get("motionSensorState"), EventMotionstate
+        )
 
         return cls(
             event_trigger_sources=trigger_source,
@@ -158,6 +171,8 @@ class RuleCriteria:
             time_ranges=time_range,
             rfid_codes=rfid_code,
             rfid_timeout=api_criteria.get("rfidTimeout"),
+            flap_states=flap_states,
+            motion_sensor_states=motion_states,
         )
 
     def matches(self, event: Event, timezone: tzinfo) -> bool:
@@ -221,7 +236,7 @@ class TransitPolicy:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-
+        _LOGGER.debug("Creating TransitPolicy from API response: %s", api_policy)
         rules = api_policy.get("rules")
 
         return cls(
@@ -246,7 +261,7 @@ class DeviceTransitPolicy:
         """Create a DeviceTransitPolicy instance from API response data."""
         if api_policy is None or "deviceTransitPolicyId" not in api_policy:
             return None
-
+        _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy)
         return cls(
             device_transit_policy_id=api_policy["deviceTransitPolicyId"],
             device_id=api_policy["deviceId"],
@@ -257,7 +272,12 @@ class DeviceTransitPolicy:
         )
 
     def determine_policy_result(self, event: Event) -> PolicyResult:
-        """Determine the policy result for a given event."""
+        """
+        Determine the policy result for a given event.
+
+        Mimics the OnlyCat flaps logic for evaluating transit policies.
+        This means that the first matching rule determines the result.
+        """
         if not self.transit_policy:
             _LOGGER.warning(
                 "No transit policy set, unable to determine policy result for event %s",
@@ -267,6 +287,18 @@ class DeviceTransitPolicy:
 
         if self.transit_policy.rules:
             for rule in self.transit_policy.rules:
+                if not rule.enabled:
+                    continue
+                if (
+                    self.device.settings["ignore_flap_motion_rules"]
+                    and rule.criteria.flap_states
+                ):
+                    continue
+                if (
+                    self.device.settings["ignore_motion_sensor_rules"]
+                    and rule.criteria.motion_sensor_states
+                ):
+                    continue
                 if not rule.criteria or not rule.criteria.matches(
                     event, self.device.time_zone
                 ):

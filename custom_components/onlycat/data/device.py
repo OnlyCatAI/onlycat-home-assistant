@@ -52,6 +52,7 @@ class Device:
     time_zone: tzinfo | None = UTC
     device_transit_policy_id: int | None = None
     device_transit_policy: DeviceTransitPolicy | None = None
+    settings: dict | None = None
 
     @classmethod
     def from_api_response(

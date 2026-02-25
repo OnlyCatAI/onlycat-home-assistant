@@ -24,13 +24,13 @@ class Pet:
 
     device: Device
     rfid_code: str
-    last_seen: datetime
+    last_seen: datetime | None
     last_seen_event: Event | None = None
     label: str | None = None
 
     def is_present(self, event: Event) -> bool | None:
         """Determine whether a pet is present based on an event."""
-        pet_name = self.label if self.label else self.rfid_code
+        pet_name = self.label or self.rfid_code
 
         if event.rfid_codes is None or self.rfid_code not in event.rfid_codes:
             return None
