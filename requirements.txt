@@ -5,5 +5,5 @@ ruff==0.15.1
 pytest==9.0.2
 pytest-asyncio==1.3.0
 python-socketio==5.16.1
-pycares==4.11.0
+pycares==5.0.1
 debugpy
