@@ -42,6 +42,9 @@
             },
             "onlycat_error_sensor": {
                 "name": "Fehlermeldungen"
+            },
+            "onlycat_human_sensor": {
+                "name": "Menschliche Bewegung"
             }
         },
         "device_tracker": {

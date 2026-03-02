@@ -21,6 +21,9 @@ ignore = [
 "**/tests/*" = [
     "INP001"
 ]
+"custom_components/onlycat/data/current_schema.py" = [
+    "E501"
+]
 
 [lint.flake8-pytest-style]
 fixture-parentheses = false

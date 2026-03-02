@@ -8,6 +8,9 @@ from datetime import datetime, timedelta, tzinfo
 from enum import Enum, StrEnum
 from typing import TYPE_CHECKING
 
+from jsonschema import ValidationError, validate
+
+from .current_schema import DEVICE_POLICY_SCHEMA
 from .event import (
     Event,
     EventClassification,
@@ -66,9 +69,10 @@ class SoundAction(StrEnum):
 class RuleAction:
     """Data representing an action in a transit policy rule."""
 
-    lock: bool
-    lockout_duration: int
+    lock: bool | None
     sound: SoundAction | None = None
+    lockout_duration: int | None = None
+    final: bool | None = None
 
     @classmethod
     def from_api_response(cls, api_action: dict) -> RuleAction | None:
@@ -83,6 +87,19 @@ class RuleAction:
             lockout_duration=api_action.get("lockoutDuration"),
             sound=SoundAction(sound) if sound else None,
         )
+
+    def to_dict(self) -> dict:
+        """Return a custom dict of RuleAction."""
+        data = {}
+        if self.lock is not None:
+            data["lock"] = self.lock
+        if self.sound is not None:
+            data["sound"] = self.sound.value
+        if self.lockout_duration is not None:
+            data["lockoutDuration"] = self.lockout_duration
+        if self.final is not None:
+            data["final"] = self.final
+        return data
 
 
 @dataclass
@@ -137,11 +154,11 @@ class RuleCriteria:
 
     event_trigger_sources: list[EventTriggerSource]
     event_classifications: list[EventClassification]
-    time_ranges: list[TimeRange]
     rfid_codes: list[str]
     rfid_timeout: int | None
-    flap_states: list[EventFlapstate]
+    time_ranges: list[TimeRange]
     motion_sensor_states: list[EventMotionstate]
+    flap_states: list[EventFlapstate]
 
     @classmethod
     def from_api_response(cls, api_criteria: dict) -> RuleCriteria | None:
@@ -175,6 +192,56 @@ class RuleCriteria:
             motion_sensor_states=motion_states,
         )
 
+    def to_dict(self) -> dict:  # noqa: PLR0912
+        """Return a custom data of RuleCriteria."""
+        data = {}
+        if self.rfid_codes:
+            data["rfidCode"] = self.rfid_codes
+        if self.time_ranges:
+            if len(self.time_ranges) == 1:
+                time_range = self.time_ranges[0]
+                data["timeRange"] = (
+                    f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-"
+                    f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+                )
+            else:
+                data["timeRange"] = [
+                    f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-"
+                    f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+                    for time_range in self.time_ranges
+                ]
+        if self.event_trigger_sources:
+            if len(self.event_trigger_sources) == 1:
+                data["eventTriggerSource"] = self.event_trigger_sources[0].value
+            else:
+                data["eventTriggerSource"] = [
+                    source.value for source in self.event_trigger_sources
+                ]
+        if self.event_classifications:
+            if len(self.event_classifications) == 1:
+                data["eventClassification"] = self.event_classifications[0].value
+            else:
+                data["eventClassification"] = [
+                    classification.value
+                    for classification in self.event_classifications
+                ]
+
+        if self.rfid_timeout is not None:
+            data["rfidTimeout"] = self.rfid_timeout
+        if self.flap_states:
+            if len(self.flap_states) == 1:
+                data["flapState"] = self.flap_states[0].value
+            else:
+                data["flapState"] = [state.value for state in self.flap_states]
+        if self.motion_sensor_states:
+            if len(self.motion_sensor_states) == 1:
+                data["motionSensorState"] = self.motion_sensor_states[0].value
+            else:
+                data["motionSensorState"] = [
+                    state.value for state in self.motion_sensor_states
+                ]
+        return data
+
     def matches(self, event: Event, timezone: tzinfo) -> bool:
         """Check if the event matches the criteria of this rule."""
         if (
@@ -204,9 +271,9 @@ class RuleCriteria:
 class Rule:
     """Data representing a rule in a transit policy."""
 
-    action: RuleAction
     criteria: RuleCriteria
-    description: str
+    action: RuleAction
+    description: str | None
     enabled: bool | None
 
     @classmethod
@@ -222,6 +289,18 @@ class Rule:
             enabled=api_rule.get("enabled", True),  # Default to True if not specified
         )
 
+    def to_dict(self) -> dict:
+        """Return a custom dict of Rule."""
+        data = {
+            "criteria": self.criteria.to_dict(),
+            "action": self.action.to_dict(),
+        }
+        if self.enabled is not None:
+            data["enabled"] = self.enabled
+        if self.description:
+            data["description"] = self.description
+        return data
+
 
 @dataclass
 class TransitPolicy:
@@ -230,20 +309,32 @@ class TransitPolicy:
     rules: list[Rule]
     idle_lock: bool
     idle_lock_battery: bool
+    ux: dict | None = None  # Undocumented settings done via App (activation sound)
 
     @classmethod
     def from_api_response(cls, api_policy: dict) -> TransitPolicy | None:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-        _LOGGER.debug("Creating TransitPolicy from API response: %s", api_policy)
         rules = api_policy.get("rules")
 
         return cls(
             rules=[Rule.from_api_rule(rule) for rule in rules] if rules else None,
             idle_lock=api_policy.get("idleLock"),
             idle_lock_battery=api_policy.get("idleLockBattery"),
+            ux=api_policy.get("ux"),
         )
+
+    def to_dict(self) -> dict:
+        """Return a custom dict of TransitPolicy."""
+        data = {
+            "rules": [rule.to_dict() for rule in self.rules] if self.rules else [],
+            "idleLock": self.idle_lock,
+            "idleLockBattery": self.idle_lock_battery,
+        }
+        if self.ux:
+            data["ux"] = self.ux
+        return data
 
 
 @dataclass
@@ -257,19 +348,40 @@ class DeviceTransitPolicy:
     device: Device | None = None
 
     @classmethod
-    def from_api_response(cls, api_policy: dict) -> DeviceTransitPolicy | None:
+    def from_api_response(
+        cls, api_policy: dict, device: Device = None
+    ) -> DeviceTransitPolicy | None:
         """Create a DeviceTransitPolicy instance from API response data."""
         if api_policy is None or "deviceTransitPolicyId" not in api_policy:
             return None
-        _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy)
+        try:
+            validate(instance=api_policy, schema=DEVICE_POLICY_SCHEMA)
+        except ValidationError as e:
+            _LOGGER.warning("Transit policy API response failed schema validation")
+            _LOGGER.debug("Validation error details: %s", e)
+            _LOGGER.debug("Invalid API response: %s", api_policy)
+        _LOGGER.debug(
+            "Creating DeviceTransitPolicy from API response: %s", api_policy.get("name")
+        )
         return cls(
             device_transit_policy_id=api_policy["deviceTransitPolicyId"],
             device_id=api_policy["deviceId"],
+            device=device,
             name=api_policy.get("name"),
             transit_policy=TransitPolicy.from_api_response(
                 api_policy.get("transitPolicy")
             ),
         )
+
+    def to_dict(self) -> dict:
+        """Return a custom dict of DeviceTransitPolicy."""
+        return {
+            "deviceTransitPolicyId": self.device_transit_policy_id,
+            "transitPolicy": self.transit_policy.to_dict()
+            if self.transit_policy
+            else None,
+            "name": self.name,
+        }
 
     def determine_policy_result(self, event: Event) -> PolicyResult:
         """

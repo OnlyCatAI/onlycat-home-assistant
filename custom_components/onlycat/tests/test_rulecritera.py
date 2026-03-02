@@ -37,7 +37,7 @@ from custom_components.onlycat.data.policy import (
                 "rfid_codes": ["123456789"],
                 "time_ranges": [TimeRange(8, 0, 10, 0)],
                 "motion_sensor_states": [EventMotionstate.OUTDOOR],
-                "flap_states": [EventFlapstate.OPEN_INWARD],
+                "flap_states": [EventFlapstate.OPEN_OUTWARD],
             },
         },
         {

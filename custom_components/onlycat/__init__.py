@@ -17,10 +17,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import OnlyCatApiClient
 from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
-from .data.device import Device, DeviceUpdate
+from .data.device import Device
 from .data.event import Event
 from .data.pet import Pet
-from .data.policy import DeviceTransitPolicy
 from .services import async_setup_services
 
 if TYPE_CHECKING:
@@ -32,6 +31,7 @@ PLATFORMS: list[Platform] = [
     Platform.DEVICE_TRACKER,
     Platform.BUTTON,
     Platform.IMAGE,
+    Platform.SENSOR,
 ]
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,18 +42,13 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
-    default_settings = {
-        "ignore_flap_motion_rules": False,
-        "ignore_motion_sensor_rules": False,
-        "poll_interval_hours": 6,
-    }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(
             token=entry.data["token"], session=async_get_clientsession(hass)
         ),
         devices=[],
         pets=[],
-        settings=entry.data.get("settings", default_settings),
+        settings=entry.data["settings"],
         coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
     )
     await entry.runtime_data.client.connect()
@@ -72,27 +67,6 @@ async def async_setup_entry(
                 "getDeviceEvents", {"deviceId": device.device_id, "subscribe": True}
             )
 
-    async def update_device(data: dict) -> None:
-        """Update a device in our runtime data when it is changed."""
-        update = DeviceUpdate.from_api_response(data)
-
-        for device in entry.runtime_data.devices:
-            if device.device_id == update.device_id:
-                updated_device = Device.from_api_response(
-                    await entry.runtime_data.client.send_message(
-                        "getDevice", {"deviceId": update.device_id, "subscribe": True}
-                    )
-                )
-                device.update_from(updated_device)
-                if device.device_transit_policy_id is not None:
-                    await _retrieve_current_transit_policy(entry, device)
-                _LOGGER.debug("Updated device: %s", device)
-                break
-        else:
-            _LOGGER.warning(
-                "Device with ID %s not found in runtime data", update.device_id
-            )
-
     async def subscribe_to_device_event(data: dict) -> None:
         """Subscribe to a device event to get updates about the event in the future."""
         await entry.runtime_data.client.send_message(
@@ -107,12 +81,11 @@ async def async_setup_entry(
     await refresh_subscriptions(None)
     entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)
     entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
-    entry.runtime_data.client.add_event_listener("deviceUpdate", update_device)
     entry.runtime_data.client.add_event_listener(
         "deviceEventUpdate", subscribe_to_device_event
     )
 
-    await async_setup_services(hass)
+    await async_setup_services(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
@@ -129,29 +102,27 @@ async def _initialize_devices(entry: OnlyCatConfigEntry) -> None:
         device = Device.from_api_response(
             await entry.runtime_data.client.send_message(
                 "getDevice", {"deviceId": device_id, "subscribe": True}
-            )
+            ),
+            entry,
         )
         entry.runtime_data.devices.append(device)
 
     for device in entry.runtime_data.devices:
         device.settings = entry.runtime_data.settings
-        if device.device_transit_policy_id is not None:
-            await _retrieve_current_transit_policy(entry, device)
-
-
-async def _retrieve_current_transit_policy(
-    entry: OnlyCatConfigEntry, device: Device
-) -> None:
-    if device.device_transit_policy_id is None:
-        return
-    transit_policy = DeviceTransitPolicy.from_api_response(
-        await entry.runtime_data.client.send_message(
-            "getDeviceTransitPolicy",
-            {"deviceTransitPolicyId": device.device_transit_policy_id},
+        entry.runtime_data.client.add_event_listener(
+            "deviceUpdate", device.handle_device_update
         )
-    )
-    transit_policy.device = device
-    device.device_transit_policy = transit_policy
+        entry.runtime_data.client.add_event_listener(
+            "getDevice", device.update_device_from_api
+        )
+        entry.runtime_data.client.add_event_listener(
+            "getDeviceTransitPolicy", device.update_device_transit_policy_from_api
+        )
+        if device.device_transit_policy_id is not None:
+            await entry.runtime_data.client.send_message(
+                "getDeviceTransitPolicy",
+                {"deviceTransitPolicyId": device.device_transit_policy_id},
+            )
 
 
 async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
@@ -195,6 +166,7 @@ async def async_unload_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Handle removal of an entry."""
+    await entry.runtime_data.client.disconnect()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
@@ -205,3 +177,26 @@ async def async_reload_entry(
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: OnlyCatConfigEntry
+) -> bool:
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+    if "settings" not in config_entry.data:
+        new_data = {**config_entry.data}
+        default_settings = {
+            "ignore_flap_motion_rules": False,
+            "ignore_motion_sensor_rules": False,
+            "poll_interval_hours": 1,
+        }
+        new_data["settings"] = default_settings
+    hass.config_entries.async_update_entry(
+        config_entry, data=new_data, minor_version=1, version=2
+    )
+    return True

@@ -1,7 +1,7 @@
 """Tests for OnlyCat/__init.py."""
 
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -119,10 +119,7 @@ async def test_initialize_devices() -> None:
     mock_entry.runtime_data.devices = []
     mock_entry.runtime_data.client = AsyncMock()
     mock_entry.runtime_data.client.send_message.side_effect = mock_send_message
-    with patch(
-        "custom_components.onlycat._retrieve_current_transit_policy"
-    ) as mock_retrieve_current_transit_policy:
-        await _initialize_devices(mock_entry)
+    await _initialize_devices(mock_entry)
 
     assert len(mock_entry.runtime_data.devices) == len(get_devices)
     mock_entry.runtime_data.client.send_message.assert_any_call(
@@ -133,4 +130,3 @@ async def test_initialize_devices() -> None:
             "getDevice", {"deviceId": device_id, "subscribe": True}
         )
     assert mock_entry.runtime_data.devices[1].device_transit_policy_id is None
-    assert mock_retrieve_current_transit_policy.call_count == 1

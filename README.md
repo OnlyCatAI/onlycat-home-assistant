@@ -13,6 +13,7 @@ HomeAssistant integration for [OnlyCat](https://www.onlycat.com/) flaps.
    * 🐭 Contraband detection
    * 🔐 Lock state
 * 🔄 Control your flap remotely using reboot and remote unlock options
+* Check and manage your existing device policies
 
 Common automation ideas enabled by this integration include:
 
@@ -25,13 +26,13 @@ Common automation ideas enabled by this integration include:
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=OnlyCatAI&repository=onlycat-home-assistant&category=integration)
 
 1. Install [Home Assistant Community Store (HACS)](https://hacs.xyz/) if you haven't done so already.
-2. Open HACS in Home Assistant 
+2. Open HACS in Home Assistant
 3. Click the three dots in the top right corner
 4. Select "Custom repositories"
 5. Add this repository URL: https://github.com/OnlyCatAI/onlycat-home-assistant
 6. Set category to "Integration"
 7. Click "Add"
-8. Search for "OnlyCat" and install 
+8. Search for "OnlyCat" and install
 9. Restart Home Assistant
 
 ## Configuration

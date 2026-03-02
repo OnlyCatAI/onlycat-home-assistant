@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import zoneinfo
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from datetime import UTC, datetime, tzinfo
 from typing import TYPE_CHECKING
 
@@ -13,8 +13,11 @@ from .pet import PolicyResult
 from .type import Type
 
 if TYPE_CHECKING:
+    from custom_components.onlycat.data import OnlyCatConfigEntry
+
     from .event import Event
-    from .policy import DeviceTransitPolicy
+
+from .policy import DeviceTransitPolicy
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,16 +50,29 @@ class Device:
     """Data representing an OnlyCat device."""
 
     device_id: str
+    config_entry: OnlyCatConfigEntry | None = None
     connectivity: DeviceConnectivity | None = None
     description: str | None = None
     time_zone: tzinfo | None = UTC
     device_transit_policy_id: int | None = None
-    device_transit_policy: DeviceTransitPolicy | None = None
+    device_transit_policies: dict[int, DeviceTransitPolicy] | None = None
     settings: dict | None = None
+
+    _policy_update_listeners: list[callable] = field(default_factory=list)
+
+    @property
+    def device_transit_policy(self) -> DeviceTransitPolicy | None:
+        """Get the current transit policy object for the device via its id."""
+        if not self.device_transit_policies or self.device_transit_policy_id is None:
+            return None
+        return self.device_transit_policies.get(self.device_transit_policy_id, None)
 
     @classmethod
     def from_api_response(
-        cls, api_device: dict, device_id: str | None = None
+        cls,
+        api_device: dict,
+        config_entry: OnlyCatConfigEntry | None = None,
+        device_id: str | None = None,
     ) -> Device | None:
         """Create a Device instance from API response data."""
         if api_device is None:
@@ -75,6 +91,7 @@ class Device:
             return None
         return cls(
             device_id=device_id,
+            config_entry=config_entry,
             connectivity=DeviceConnectivity.from_api_response(
                 api_device.get("connectivity")
             ),
@@ -83,15 +100,33 @@ class Device:
             device_transit_policy_id=api_device.get("deviceTransitPolicyId"),
         )
 
-    def update_from(self, updated_device: Device) -> None:
+    async def handle_device_update(self, data: dict) -> None:
         """Update the device with data from another Device instance."""
+        if data.get("deviceId") != self.device_id:
+            return
+        update = DeviceUpdate.from_api_response(data)
+        await self.config_entry.runtime_data.client.send_message(
+            "getDevice", {"deviceId": update.device_id, "subscribe": True}
+        )
+
+    async def update_device_from_api(self, data: dict) -> None:
+        """Update the device with data from an API response."""
+        if data.get("deviceId") != self.device_id:
+            return
+        updated_device = Device.from_api_response(
+            data, self.config_entry, self.device_id
+        )
         if updated_device is None:
             return
-
-        for field in fields(self):
-            new_value = getattr(updated_device, field.name, None)
+        for obj_field in fields(self):
+            new_value = getattr(updated_device, obj_field.name, None)
             if new_value is not None:
-                setattr(self, field.name, new_value)
+                setattr(self, obj_field.name, new_value)
+        if self.device_transit_policy_id is not None:
+            await self.config_entry.runtime_data.client.send_message(
+                "getDeviceTransitPolicy",
+                {"deviceTransitPolicyId": self.device_transit_policy_id},
+            )
 
     def is_unlocked_in_idle_state(self) -> bool | None:
         """Check if the device is unlocked in idle state."""
@@ -115,6 +150,27 @@ class Device:
             return False
         return None
 
+    async def update_device_transit_policy(
+        self, transit_policy: DeviceTransitPolicy
+    ) -> None:
+        """Update the device's transit policy."""
+        if self.device_transit_policies is None:
+            self.device_transit_policies = {}
+        self.device_transit_policies.update(
+            {transit_policy.device_transit_policy_id: transit_policy}
+        )
+        for listener in self._policy_update_listeners:
+            listener()
+
+    async def update_device_transit_policy_from_api(self, data: dict) -> None:
+        """Update the device's transit policy with API response data."""
+        transit_policy = DeviceTransitPolicy.from_api_response(data, self)
+        await self.update_device_transit_policy(transit_policy)
+
+    def add_policy_update_listener(self, listener: callable) -> None:
+        """Add a listener to be called when the device transit policy is updated."""
+        self._policy_update_listeners.append(listener)
+
 
 @dataclass
 class DeviceUpdate:
@@ -133,6 +189,7 @@ class DeviceUpdate:
             device_id=api_event["deviceId"],
             type=Type(api_event["type"]) if api_event.get("type") else Type.UNKNOWN,
             body=Device.from_api_response(
-                api_event.get("body"), device_id=api_event["deviceId"]
+                api_event.get("body"),
+                device_id=api_event["deviceId"],
             ),
         )

@@ -49,8 +49,8 @@ class EventFlapstate(Enum):
     """Enum representing the flap state during an OnlyCat flap event."""
 
     CLOSED = 0
-    OPEN_INWARD = 1
-    OPEN_OUTWARD = 2
+    OPEN_OUTWARD = 1
+    OPEN_INWARD = 2
     INVALID = 3
 
     @classmethod

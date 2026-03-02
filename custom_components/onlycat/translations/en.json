@@ -42,6 +42,9 @@
             },
             "onlycat_error_sensor": {
                 "name": "Errors"
+            },
+            "onlycat_human_sensor": {
+                "name": "Human activity"
             }
         },
         "device_tracker": {

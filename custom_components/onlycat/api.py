@@ -101,7 +101,18 @@ class OnlyCatApiClient:
     async def send_message(self, event: str, data: any) -> Any | None:
         """Send a message to the API."""
         _LOGGER.debug("Sending %s message to API: %s", event, data)
-        return await self._socket.call(event, data)
+        reply = await self._socket.call(event, data)
+        for callback in self._listeners[event]:
+            try:
+                await callback(reply)
+            except Exception:
+                _LOGGER.exception(
+                    "Error while handling reply for event %s with data %s: %s",
+                    event,
+                    data,
+                    reply,
+                )
+        return reply
 
     async def wait(self) -> None:
         """Wait until client is disconnected."""

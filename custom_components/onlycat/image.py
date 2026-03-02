@@ -99,11 +99,6 @@ class OnlyCatLastImage(ImageEntity):
         if data["deviceId"] != self.device.device_id:
             return
         event_update = EventUpdate.from_api_response(data)
-        _LOGGER.debug(
-            "Processing event update for image:  %s: %s",
-            self.device.device_id,
-            str(data),
-        )
         if event_update.event_id != self._current_event.event_id:
             self._current_event = event_update.event
             self._current_event.device_id = event_update.device_id
@@ -136,9 +131,6 @@ class OnlyCatLastImage(ImageEntity):
 
     async def update_event(self, event: Event) -> None:
         """Update with event data."""
-        _LOGGER.debug(
-            "Updating event for device %s: %s", self.device.device_id, str(event)
-        )
         self._current_event = event
         self._cached_image = None
         frame_to_show = (
