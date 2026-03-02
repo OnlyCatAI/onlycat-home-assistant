@@ -188,6 +188,8 @@ async def async_migrate_entry(
         config_entry.version,
         config_entry.minor_version,
     )
+    if config_entry.version == 1 and "settings" in config_entry.data:
+        return True
     if "settings" not in config_entry.data:
         new_data = {**config_entry.data}
         default_settings = {
