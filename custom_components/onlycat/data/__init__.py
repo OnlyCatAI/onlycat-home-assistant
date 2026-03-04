@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -30,3 +30,5 @@ class OnlyCatData:
     pets: list[Pet]
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
+    camera_entities: dict[str, Any]
+    image_entities: dict[str, Any]

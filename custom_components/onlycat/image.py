@@ -46,6 +46,9 @@ async def async_setup_entry(
         for device in entry.runtime_data.devices
     ]
     async_add_entities(entities)
+    for entity in entities:
+        entry.runtime_data.image_entities[entity.device.device_id] = entity
+
     events = await entry.runtime_data.client.send_message(
         "getEvents", {"subscribe": True}
     )
