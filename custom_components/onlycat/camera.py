@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from homeassistant.components.camera import (
     Camera,
@@ -114,7 +114,9 @@ class OnlyCatLastVideo(Camera):
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
     async def async_camera_image(
-        self, width: int | None = None, height: int | None = None
+        self,
+        width: int | None = None,  # noqa: ARG002
+        height: int | None = None,  # noqa: ARG002
     ) -> bytes | None:
         """Return a still image response from the camera."""
         if not self._current_event:
