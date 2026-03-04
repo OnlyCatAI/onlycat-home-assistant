@@ -57,15 +57,23 @@ async def async_setup_entry(
         entry.runtime_data.camera_entities[entity.device.device_id] = entity
 
     # Initialize with the last event from API if possible
+    _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
-        events_response = await entry.runtime_data.client.send_message(
-            "getDeviceEvents", {"deviceId": entity.device.device_id}
-        )
-        if isinstance(events_response, list) and len(events_response) > 0:
-            events_response.sort(
-                key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")), reverse=True
+        try:
+            events_response = await entry.runtime_data.client.send_message(
+                event="getDeviceEvents",
+                data={"deviceId": entity.device.device_id},
             )
-            entity.update_event(Event.from_api_response(events_response[0]))
+            if isinstance(events_response, list) and len(events_response) > 0:
+                events_response.sort(
+                    key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")),
+                    reverse=True,
+                )
+                entity.update_event(Event.from_api_response(events_response[0]))
+        except Exception:
+            _LOGGER.exception(
+                "Error initializing camera for device %s", entity.device.device_id
+            )
 
 
 class OnlyCatLastVideo(Camera):

@@ -49,8 +49,9 @@ async def async_setup_entry(
     for entity in entities:
         entry.runtime_data.image_entities[entity.device.device_id] = entity
 
+    _LOGGER.debug("Fetching events for image entities")
     events = await entry.runtime_data.client.send_message(
-        "getEvents", {"subscribe": True}
+        event="getEvents", data={"subscribe": True}
     )
     if events is None or len(events) == 0:
         return
@@ -94,6 +95,7 @@ class OnlyCatLastImage(ImageEntity):
         self._api_client = api_client
         self.entity_id = "image." + self._attr_unique_id
         self._attr_image_url: str = ""
+        self._cached_image: bytes | None = None
         api_client.add_event_listener("eventUpdate", self.on_event_update)
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
