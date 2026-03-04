@@ -55,9 +55,6 @@
         "select": {
             "onlycat_policy_select": {
                 "name": "Zugangsrichtlinie"
-            },
-            "onlycat_history_select": {
-                "name": "Foto-Verlauf Index"
             }
         },
         "button": {

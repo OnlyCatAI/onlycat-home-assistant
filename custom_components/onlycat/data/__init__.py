@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -30,5 +30,5 @@ class OnlyCatData:
     pets: list[Pet]
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
-    image_entities: dict[str, Any] = field(default_factory=dict)
-    camera_entities: dict[str, Any] = field(default_factory=dict)
+    camera_entities: dict[str, Any]
+    image_entities: dict[str, Any]

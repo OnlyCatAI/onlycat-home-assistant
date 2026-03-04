@@ -43,18 +43,13 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
-    default_settings = {
-        "ignore_flap_motion_rules": False,
-        "ignore_motion_sensor_rules": False,
-        "poll_interval_hours": 6,
-    }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(
             token=entry.data["token"], session=async_get_clientsession(hass)
         ),
         devices=[],
         pets=[],
-        settings=entry.data.get("settings", default_settings),
+        settings=entry.data["settings"],
         coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
     )
     await entry.runtime_data.client.connect()
@@ -133,14 +128,12 @@ async def _initialize_devices(entry: OnlyCatConfigEntry) -> None:
 
 async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
     for device in entry.runtime_data.devices:
-        device_events = [
+        events = [
             Event.from_api_response(event)
             for event in await entry.runtime_data.client.send_message(
                 "getDeviceEvents", {"deviceId": device.device_id}
             )
         ]
-        device_events = [e for e in device_events if e is not None]
-
         rfids = await entry.runtime_data.client.send_message(
             "getLastSeenRfidCodesByDevice", {"deviceId": device.device_id}
         )
@@ -163,7 +156,7 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             entry.runtime_data.pets.append(pet)
 
             # Get last seen event to determine current presence state
-            for event in device_events:
+            for event in events:
                 if event.rfid_codes and pet.rfid_code in event.rfid_codes:
                     pet.last_seen_event = event
                     break
@@ -174,6 +167,7 @@ async def async_unload_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Handle removal of an entry."""
+    await entry.runtime_data.client.disconnect()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
@@ -184,3 +178,28 @@ async def async_reload_entry(
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: OnlyCatConfigEntry
+) -> bool:
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+    if config_entry.version == 1 and "settings" in config_entry.data:
+        return True
+    if "settings" not in config_entry.data:
+        new_data = {**config_entry.data}
+        default_settings = {
+            "ignore_flap_motion_rules": False,
+            "ignore_motion_sensor_rules": False,
+            "poll_interval_hours": 1,
+        }
+        new_data["settings"] = default_settings
+    hass.config_entries.async_update_entry(
+        config_entry, data=new_data, minor_version=1, version=2
+    )
+    return True
