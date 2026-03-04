@@ -100,12 +100,13 @@ class OnlyCatLastVideo(Camera):
         )
         self._api_client = api_client
         self.entity_id = "camera." + self._attr_unique_id
+        self._cached_image: bytes | None = None
 
         api_client.add_event_listener("eventUpdate", self.on_event_update)
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
     async def async_camera_image(
-        self, _width: int | None = None, _height: int | None = None
+        self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         """Return a still image response from the camera."""
         if not self._current_event:
@@ -115,6 +116,7 @@ class OnlyCatLastVideo(Camera):
         image_entity: OnlyCatLastImage = image_entities.get(self.device.device_id)
 
         if image_entity:
+            # This will now use the cache if available or fetch it
             return await image_entity.async_image()
 
         return None
