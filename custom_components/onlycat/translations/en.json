@@ -66,8 +66,13 @@
             }
         },
         "image": {
-            "onlycat_event_image": {
-                "name": "Latest Event Image"
+            "onlycat_last_activity_image": {
+                "name": "Last activity image"
+            }
+        },
+        "camera": {
+            "onlycat_last_activity_video": {
+                "name": "Last activity video"
             }
         }
     }
