@@ -115,6 +115,11 @@ class OnlyCatPetTracker(TrackerEntity):
             return
 
         self._current_event.update_from(EventUpdate.from_api_response(data).event)
+        if (
+            self._current_event.rfid_codes is None
+            or self.pet.rfid_code not in self._current_event.rfid_codes
+        ):
+            return
         self.determine_new_state(self._current_event)
         self.async_write_ha_state()
 
