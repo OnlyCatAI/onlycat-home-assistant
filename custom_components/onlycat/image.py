@@ -95,7 +95,6 @@ class OnlyCatLastImage(ImageEntity):
         self._api_client = api_client
         self.entity_id = "image." + self._attr_unique_id
         self._attr_image_url: str = ""
-        self._cached_image: bytes | None = None
         api_client.add_event_listener("eventUpdate", self.on_event_update)
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
@@ -109,7 +108,6 @@ class OnlyCatLastImage(ImageEntity):
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
         self._current_event.update_from(event_update.event)
-        self._cached_image = None
         self._current_event.timestamp += timedelta(seconds=1)
         frame_to_show = (
             self._current_event.poster_frame_index

@@ -33,10 +33,6 @@ ENTITY_DESCRIPTION = CameraEntityDescription(
     translation_key="onlycat_last_activity_video",
 )
 
-IMAGE_BASEURL = "https://gateway.onlycat.com/events/"
-MAX_HISTORY_SIZE = 11  # Same as image.py
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: OnlyCatConfigEntry,
