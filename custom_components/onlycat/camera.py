@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from .data.device import Device
     from .image import OnlyCatLastImage
 
+VIDEO_BASEURL = "https://gateway.onlycat.com/sharing/video/"
 ENTITY_DESCRIPTION = CameraEntityDescription(
     key="OnlyCat",
     name="Last activity video",
@@ -53,7 +54,6 @@ async def async_setup_entry(
     for entity in entities:
         entry.runtime_data.camera_entities[entity.device.device_id] = entity
 
-    # Initialize with the last event from API if possible
     _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
         try:
@@ -135,7 +135,7 @@ class OnlyCatLastVideo(Camera):
 
         event = self._current_event
         return (
-            f"https://gateway.onlycat.com/sharing/video/{event.device_id}/"
+            f"{VIDEO_BASEURL}{event.device_id}/"
             f"{event.event_id}?t={event.access_token}"
         )
 
