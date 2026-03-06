@@ -316,14 +316,15 @@ class TransitPolicy:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-        rules = api_policy.get("rules")
+
+        rules_data = api_policy.get("rules") or []
+        all_rules = [Rule.from_api_rule(rule) for rule in rules_data]
+        rules = [r for r in all_rules if isinstance(r, Rule)]
 
         return cls(
-            rules=[r for rule in rules if (r := Rule.from_api_rule(rule)) is not None]
-            if rules
-            else [],
-            idle_lock=api_policy.get("idleLock"),
-            idle_lock_battery=api_policy.get("idleLockBattery"),
+            rules=rules,
+            idle_lock=api_policy.get("idleLock", False),
+            idle_lock_battery=api_policy.get("idleLockBattery", False),
             ux=api_policy.get("ux"),
         )
 
