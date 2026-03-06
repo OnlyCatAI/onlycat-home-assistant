@@ -316,7 +316,7 @@ class TransitPolicy:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-        
+
         rules_data = api_policy.get("rules") or []
         all_rules = [Rule.from_api_rule(rule) for rule in rules_data]
         rules = [r for r in all_rules if isinstance(r, Rule)]
