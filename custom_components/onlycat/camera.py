@@ -34,6 +34,7 @@ ENTITY_DESCRIPTION = CameraEntityDescription(
     translation_key="onlycat_last_activity_video",
 )
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: OnlyCatConfigEntry,
@@ -135,8 +136,7 @@ class OnlyCatLastVideo(Camera):
 
         event = self._current_event
         return (
-            f"{VIDEO_BASEURL}{event.device_id}/"
-            f"{event.event_id}?t={event.access_token}"
+            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
         )
 
     @callback
