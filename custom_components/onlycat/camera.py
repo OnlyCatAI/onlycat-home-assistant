@@ -144,6 +144,19 @@ class OnlyCatLastVideo(Camera):
         """Update with event data."""
         if event is None:
             return
+            
+        if self._current_event and self._current_event.event_id is not None and event.event_id is not None:
+             if event.event_id < self._current_event.event_id:
+                 return
+                 
+        if self._current_event and self._current_event.event_id != event.event_id:
+            if hasattr(self, "stream") and self.stream:
+                try:
+                    self.stream.stop()
+                except Exception:
+                    pass
+                self.stream = None
+                 
         self._current_event = event
         self.async_write_ha_state()
 
@@ -156,4 +169,45 @@ class OnlyCatLastVideo(Camera):
         if not event_update or not event_update.event:
             return
 
-        self.update_event(event_update.event)
+        # Ignore older events for the "Last activity" view
+        if self._current_event and self._current_event.event_id is not None:
+            if event_update.event_id is not None and event_update.event_id < self._current_event.event_id:
+                return
+
+        if self._current_event and self._current_event.event_id == event_update.event_id:
+            # Partial update to current event
+            self._current_event.update_from(event_update.event)
+            self.async_write_ha_state()
+        else:
+            # New event, update to it
+            if hasattr(self, "stream") and self.stream:
+                try:
+                    self.stream.stop()
+                except Exception:
+                    pass
+                self.stream = None
+                
+            self._current_event = event_update.event
+            self._current_event.device_id = event_update.device_id
+            self._current_event.event_id = event_update.event_id
+            
+            # If the new event doesn't have an access token, it might be a partial socket push.
+            # We proactively grab the latest events to ensure the video URL is fully formed.
+            if not self._current_event.access_token:
+                try:
+                    events_response = await self._api_client.send_message(
+                        event="getDeviceEvents",
+                        data={"deviceId": self.device.device_id},
+                    )
+                    if isinstance(events_response, list) and len(events_response) > 0:
+                        events_response.sort(
+                            key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")),
+                            reverse=True,
+                        )
+                        latest_event = Event.from_api_response(events_response[0])
+                        if latest_event and latest_event.event_id == self._current_event.event_id:
+                            self._current_event.update_from(latest_event)
+                except Exception as e:
+                    _LOGGER.error("Failed to fetch full new event details: %s", e)
+
+            self.async_write_ha_state()
