@@ -163,7 +163,7 @@ class OnlyCatLastVideo(Camera):
             with contextlib.suppress(Exception):
                 self.stream.stop()
             self.stream = None
-                 
+
         self._current_event = event
         self.async_write_ha_state()
 
@@ -198,11 +198,11 @@ class OnlyCatLastVideo(Camera):
                 with contextlib.suppress(Exception):
                     self.stream.stop()
                 self.stream = None
-                
+
             self._current_event = event_update.event
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
-            
+
             # If the new event doesn't have an access token, it might be a partial socket push.
             # We proactively grab the latest events to ensure the video URL is fully formed.
             if not self._current_event.access_token:
