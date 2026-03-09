@@ -139,14 +139,24 @@ class EventUpdate:
     @classmethod
     def from_api_response(cls, api_event: dict) -> EventUpdate | None:
         """Create an EventUpdate instance from API response data."""
-        device_id = api_event.get("deviceId", api_event.get("body").get("deviceId"))
-        event_id = api_event.get("eventId", api_event.get("body").get("eventId"))
+        if not api_event:
+            return None
+        body = api_event.get("body") or {}
+        device_id = api_event.get("deviceId", body.get("deviceId"))
+        event_id = api_event.get("eventId", body.get("eventId"))
         event_type = (
             Type(api_event.get("type")) if api_event.get("type") else Type.UNKNOWN
         )
-        event = Event.from_api_response(api_event.get("body"))
+        event = Event.from_api_response(body)
+        
+        # If body was empty, event might be None, but EventUpdate expects an Event object.
+        # Fallback to an empty Event if needed.
+        if event is None:
+            event = Event()
+            
         if event.event_id is None:
             event.event_id = event_id
+            
         return cls(
             device_id=device_id,
             event_id=event_id,
