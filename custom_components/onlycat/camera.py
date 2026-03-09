@@ -149,9 +149,9 @@ class OnlyCatLastVideo(Camera):
             self._current_event
             and self._current_event.event_id is not None
             and event.event_id is not None
+            and event.event_id < self._current_event.event_id
         ):
-            if event.event_id < self._current_event.event_id:
-                return
+            return
 
         if self._current_event and self._current_event.event_id != event.event_id:
             if hasattr(self, "stream") and self.stream:
