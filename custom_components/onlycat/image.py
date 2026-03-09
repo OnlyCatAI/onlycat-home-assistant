@@ -121,7 +121,7 @@ class OnlyCatLastImage(ImageEntity):
         self._current_event.update_from(event_update.event)
 
         # Clear HA internal image cache so frontend fetches new image
-        self._cached_image = None
+        self._cached_image: bytes | None = None
 
         if self._current_event.timestamp:
             self._current_event.timestamp += timedelta(seconds=1)
@@ -130,7 +130,7 @@ class OnlyCatLastImage(ImageEntity):
         frame_to_show = (
             self._current_event.poster_frame_index
             if self._current_event.poster_frame_index is not None
-            else self._current_event.frame_count / 2
+            else self._current_event.frame_count // 2
             if self._current_event.frame_count is not None
             else 1
         )
@@ -156,7 +156,7 @@ class OnlyCatLastImage(ImageEntity):
         frame_to_show = (
             self._current_event.poster_frame_index
             if self._current_event.poster_frame_index is not None
-            else self._current_event.frame_count / 2
+            else self._current_event.frame_count // 2
             if self._current_event.frame_count is not None
             else 1
         )
@@ -168,7 +168,7 @@ class OnlyCatLastImage(ImageEntity):
             + "/"
             + str(frame_to_show)
         )
-        self._attr_image_last_updated = self._current_event.timestamp
+        self._attr_image_last_updated = self._current_event.timestamp + timedelta(seconds=1)
         _LOGGER.debug(
             "Updated image URL for device %s: %s",
             self._current_event.timestamp,
