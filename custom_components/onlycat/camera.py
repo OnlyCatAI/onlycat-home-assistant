@@ -1,9 +1,11 @@
+"""Camera platform for OnlyCat."""
+
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import datetime as dt
 import logging
-import asyncio
 from typing import TYPE_CHECKING
 
 from homeassistant.components.camera import (
@@ -18,14 +20,15 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .const import DOMAIN
 from .data.event import Event, EventUpdate
 
-_LOGGER = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
     from .api import OnlyCatApiClient
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
     from .image import OnlyCatLastImage
+
+_LOGGER = logging.getLogger(__name__)
 
 VIDEO_BASEURL = "https://gateway.onlycat.com/sharing/video/"
 ENTITY_DESCRIPTION = CameraEntityDescription(
@@ -33,6 +36,7 @@ ENTITY_DESCRIPTION = CameraEntityDescription(
     name="Last activity video",
     translation_key="onlycat_last_activity_video",
 )
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -73,12 +77,13 @@ async def async_setup_entry(
                 "Error initializing camera for device %s", entity.device.device_id
             )
 
+
 class OnlyCatLastVideo(Camera):
     """OnlyCat camera class for last activity video."""
 
     _attr_has_entity_name = True
     _attr_supported_features = CameraEntityFeature.STREAM
-    # Force HLS stream type to prevent "fast-forward" playback issues with MP4 clips
+    # Force HLS stream type to prevent playback issues
     _attr_frontend_stream_type = StreamType.HLS
 
     @property
@@ -109,20 +114,19 @@ class OnlyCatLastVideo(Camera):
         self.entity_id = "camera." + self._attr_unique_id
         self._cached_image: bytes | None = None
 
-        # Listen for real-time event updates from the OnlyCat API
+        # Listen for real-time event updates
         api_client.add_event_listener("eventUpdate", self.on_event_update)
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
     async def async_camera_image(
         self,
-        width: int | None = None,
-        height: int | None = None,
+        width: int | None = None,  # noqa: ARG002
+        height: int | None = None,  # noqa: ARG002
     ) -> bytes | None:
         """Return a still image response from the camera (thumbnail)."""
         if not self._current_event:
             return None
 
-        # Try to get the thumbnail from the image entity for a better preview
         image_entities = self.device.config_entry.runtime_data.image_entities
         image_entity: OnlyCatLastImage = image_entities.get(self.device.device_id)
 
@@ -138,13 +142,14 @@ class OnlyCatLastVideo(Camera):
 
         event = self._current_event
         # Construct the URL with the mandatory access token
-        url = f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
-        _LOGGER.debug("Streaming from URL: %s", url)
-        return url
+        return (
+            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}"
+            f"?t={event.access_token}"
+        )
 
     @callback
     def _reset_stream(self) -> None:
-        """Helper to stop and reset the current stream buffer."""
+        """Stop and reset the current stream buffer."""
         if hasattr(self, "stream") and self.stream:
             with contextlib.suppress(Exception):
                 self.stream.stop()
@@ -165,7 +170,7 @@ class OnlyCatLastVideo(Camera):
         ):
             return
 
-        # If it's a new event ID, clear the old stream to avoid playback loops
+        # If it's a new event ID, clear the old stream
         if self._current_event and self._current_event.event_id != event.event_id:
             self._reset_stream()
 
@@ -181,7 +186,7 @@ class OnlyCatLastVideo(Camera):
         if not event_update or not event_update.event:
             return
 
-        # Ignore older events for the "Last activity" view
+        # Ignore older events
         if (
             self._current_event
             and self._current_event.event_id is not None
@@ -194,29 +199,30 @@ class OnlyCatLastVideo(Camera):
             self._current_event
             and self._current_event.event_id == event_update.event_id
         ):
-            # Partial update to existing event (e.g., updating the access token)
+            # Partial update to existing event
             self._current_event.update_from(event_update.event)
             self.async_write_ha_state()
         else:
-            # Completely new event detected: Reset stream immediately
+            # Completely new event detected
             self._reset_stream()
 
             self._current_event = event_update.event
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
 
-            # If the token is missing, wait a second and fetch full details
-            # This handles cases where the notification is faster than the video processing
+            # If the token is missing, wait and fetch full details
             if not self._current_event.access_token:
                 try:
-                    await asyncio.sleep(1.0) 
+                    await asyncio.sleep(1.0)
                     events_response = await self._api_client.send_message(
                         event="getDeviceEvents",
                         data={"deviceId": self.device.device_id},
                     )
                     if isinstance(events_response, list) and len(events_response) > 0:
                         events_response.sort(
-                            key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")),
+                            key=lambda e: dt.datetime.fromisoformat(
+                                e.get("timestamp")
+                            ),
                             reverse=True,
                         )
                         latest_event = Event.from_api_response(events_response[0])
