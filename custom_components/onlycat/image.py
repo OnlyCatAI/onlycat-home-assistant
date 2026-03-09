@@ -105,9 +105,13 @@ class OnlyCatLastImage(ImageEntity):
         event_update = EventUpdate.from_api_response(data)
         
         # Ignore older events to prevent showing an old image
-        if self._current_event and self._current_event.event_id is not None:
-            if event_update.event_id is not None and event_update.event_id < self._current_event.event_id:
-                return
+        if (
+            self._current_event
+            and self._current_event.event_id is not None
+            and event_update.event_id is not None
+            and event_update.event_id < self._current_event.event_id
+        ):
+            return
 
         if event_update.event_id != self._current_event.event_id:
             self._current_event = event_update.event

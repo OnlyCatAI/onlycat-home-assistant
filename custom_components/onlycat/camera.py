@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import logging
 from typing import TYPE_CHECKING
@@ -153,13 +154,15 @@ class OnlyCatLastVideo(Camera):
         ):
             return
 
-        if self._current_event and self._current_event.event_id != event.event_id:
-            if hasattr(self, "stream") and self.stream:
-                try:
-                    self.stream.stop()
-                except Exception:
-                    pass
-                self.stream = None
+        if (
+            self._current_event
+            and self._current_event.event_id != event.event_id
+            and hasattr(self, "stream")
+            and self.stream
+        ):
+            with contextlib.suppress(Exception):
+                self.stream.stop()
+            self.stream = None
                  
         self._current_event = event
         self.async_write_ha_state()
@@ -192,10 +195,8 @@ class OnlyCatLastVideo(Camera):
         else:
             # New event, update to it
             if hasattr(self, "stream") and self.stream:
-                try:
+                with contextlib.suppress(Exception):
                     self.stream.stop()
-                except Exception:
-                    pass
                 self.stream = None
                 
             self._current_event = event_update.event
@@ -216,7 +217,10 @@ class OnlyCatLastVideo(Camera):
                             reverse=True,
                         )
                         latest_event = Event.from_api_response(events_response[0])
-                        if latest_event and latest_event.event_id == self._current_event.event_id:
+                        if (
+                            latest_event
+                            and latest_event.event_id == self._current_event.event_id
+                        ):
                             self._current_event.update_from(latest_event)
                 except Exception:
                     _LOGGER.exception("Failed to fetch full new event details")
