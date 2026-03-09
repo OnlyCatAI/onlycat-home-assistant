@@ -203,8 +203,9 @@ class OnlyCatLastVideo(Camera):
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
 
-            # If the new event doesn't have an access token, it might be a partial socket push.
-            # We proactively grab the latest events to ensure the video URL is fully formed.
+            # If the new event doesn't have an access token, it might be
+            # a partial socket push. We proactively grab the latest events
+            # to ensure the video URL is fully formed.
             if not self._current_event.access_token:
                 try:
                     events_response = await self._api_client.send_message(

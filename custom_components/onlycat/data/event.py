@@ -154,10 +154,10 @@ class EventUpdate:
         # Fallback to an empty Event if needed.
         if event is None:
             event = Event()
-            
+
         if event.event_id is None:
             event.event_id = event_id
-            
+
         return cls(
             device_id=device_id,
             event_id=event_id,
