@@ -103,12 +103,26 @@ class OnlyCatLastImage(ImageEntity):
         if data["deviceId"] != self.device.device_id:
             return
         event_update = EventUpdate.from_api_response(data)
+        
+        # Ignore older events to prevent showing an old image
+        if self._current_event and self._current_event.event_id is not None:
+            if event_update.event_id is not None and event_update.event_id < self._current_event.event_id:
+                return
+
         if event_update.event_id != self._current_event.event_id:
             self._current_event = event_update.event
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
+            
         self._current_event.update_from(event_update.event)
-        self._current_event.timestamp += timedelta(seconds=1)
+        
+        # Clear HA internal image cache so frontend fetches new image
+        self._cached_image = None
+        
+        if self._current_event.timestamp:
+            self._current_event.timestamp += timedelta(seconds=1)
+            self._attr_image_last_updated = self._current_event.timestamp
+            
         frame_to_show = (
             self._current_event.poster_frame_index
             if self._current_event.poster_frame_index is not None
@@ -118,16 +132,15 @@ class OnlyCatLastImage(ImageEntity):
         )
         self._attr_image_url = (
             IMAGE_BASEURL
-            + self._current_event.device_id
+            + str(self._current_event.device_id)
             + "/"
             + str(self._current_event.event_id)
             + "/"
             + str(frame_to_show)
         )
-        self._attr_image_last_updated = self._current_event.timestamp
         _LOGGER.debug(
             "Updated image URL %s: %s",
-            self._current_event.timestamp,
+            self._attr_image_last_updated,
             self._attr_image_url,
         )
         self.async_write_ha_state()
