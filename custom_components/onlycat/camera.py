@@ -144,11 +144,15 @@ class OnlyCatLastVideo(Camera):
         """Update with event data."""
         if event is None:
             return
-            
-        if self._current_event and self._current_event.event_id is not None and event.event_id is not None:
-             if event.event_id < self._current_event.event_id:
-                 return
-                 
+
+        if (
+            self._current_event
+            and self._current_event.event_id is not None
+            and event.event_id is not None
+        ):
+            if event.event_id < self._current_event.event_id:
+                return
+
         if self._current_event and self._current_event.event_id != event.event_id:
             if hasattr(self, "stream") and self.stream:
                 try:
@@ -170,11 +174,18 @@ class OnlyCatLastVideo(Camera):
             return
 
         # Ignore older events for the "Last activity" view
-        if self._current_event and self._current_event.event_id is not None:
-            if event_update.event_id is not None and event_update.event_id < self._current_event.event_id:
-                return
+        if (
+            self._current_event
+            and self._current_event.event_id is not None
+            and event_update.event_id is not None
+            and event_update.event_id < self._current_event.event_id
+        ):
+            return
 
-        if self._current_event and self._current_event.event_id == event_update.event_id:
+        if (
+            self._current_event
+            and self._current_event.event_id == event_update.event_id
+        ):
             # Partial update to current event
             self._current_event.update_from(event_update.event)
             self.async_write_ha_state()
@@ -207,7 +218,7 @@ class OnlyCatLastVideo(Camera):
                         latest_event = Event.from_api_response(events_response[0])
                         if latest_event and latest_event.event_id == self._current_event.event_id:
                             self._current_event.update_from(latest_event)
-                except Exception as e:
-                    _LOGGER.error("Failed to fetch full new event details: %s", e)
+                except Exception:
+                    _LOGGER.exception("Failed to fetch full new event details")
 
             self.async_write_ha_state()
