@@ -196,7 +196,10 @@ class OnlyCatLastVideo(Camera):
             return
 
         # Check if this is a partial update for the current event
-        if self._current_event and self._current_event.event_id == event_update.event_id:
+        if (
+            self._current_event
+            and self._current_event.event_id == event_update.event_id
+        ):
             # Partial update to existing event
             self._current_event.update_from(event_update.event)
             self.async_write_ha_state()
