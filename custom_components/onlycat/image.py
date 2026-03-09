@@ -168,7 +168,9 @@ class OnlyCatLastImage(ImageEntity):
             + "/"
             + str(frame_to_show)
         )
-        self._attr_image_last_updated = self._current_event.timestamp + timedelta(seconds=1)
+        self._attr_image_last_updated = (
+            self._current_event.timestamp + timedelta(seconds=1)
+        )
         _LOGGER.debug(
             "Updated image URL for device %s: %s",
             self._current_event.timestamp,
