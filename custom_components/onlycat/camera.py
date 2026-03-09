@@ -195,10 +195,7 @@ class OnlyCatLastVideo(Camera):
         ):
             return
 
-        if (
-            self._current_event
-            and self._current_event.event_id == event_update.event_id
-        ):
+        if self._current_event and self._current_event.event_id == event_update.event_id:
             # Partial update to existing event
             self._current_event.update_from(event_update.event)
             self.async_write_ha_state()
@@ -220,9 +217,7 @@ class OnlyCatLastVideo(Camera):
                     )
                     if isinstance(events_response, list) and len(events_response) > 0:
                         events_response.sort(
-                            key=lambda e: dt.datetime.fromisoformat(
-                                e.get("timestamp")
-                            ),
+                            key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")),
                             reverse=True,
                         )
                         latest_event = Event.from_api_response(events_response[0])
