@@ -1,4 +1,5 @@
 """Media Source platform for OnlyCat."""
+
 from __future__ import annotations
 
 import logging
@@ -35,14 +36,10 @@ class OnlyCatMediaSource(MediaSource):
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a URL."""
         _LOGGER.debug("Resolving media: %s", item.identifier)
-        mime_type = (
-            "video/mp4" if "/sharing/" in item.identifier else "image/jpeg"
-        )
+        mime_type = "video/mp4" if "/sharing/" in item.identifier else "image/jpeg"
         return PlayMedia(item.identifier, mime_type)
 
-    async def async_browse_media(
-        self, item: MediaSourceItem
-    ) -> BrowseMediaSource:
+    async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
         """Browse media."""
         _LOGGER.debug("Browsing media: identifier=%s", item.identifier)
         try:
@@ -75,16 +72,18 @@ class OnlyCatMediaSource(MediaSource):
             if not hasattr(entry, "runtime_data"):
                 continue
 
-            children.extend([
-                BrowseMediaSource(
-                    domain=DOMAIN,
-                    identifier=device.device_id,
-                    media_class=MediaClass.DIRECTORY,
-                    media_content_type=MediaType.ALBUM,
-                    title=device.description or device.device_id,
-                )
-                for device in entry.runtime_data.devices
-            ])
+            children.extend(
+                [
+                    BrowseMediaSource(
+                        domain=DOMAIN,
+                        identifier=device.device_id,
+                        media_class=MediaClass.DIRECTORY,
+                        media_content_type=MediaType.ALBUM,
+                        title=device.description or device.device_id,
+                    )
+                    for device in entry.runtime_data.devices
+                ]
+            )
 
         return BrowseMediaSource(
             domain=DOMAIN,
@@ -147,9 +146,7 @@ class OnlyCatMediaSource(MediaSource):
                     break
 
         title = "Fotos" if media_type == "photos" else "Videos"
-        media_class = (
-            MediaClass.IMAGE if media_type == "photos" else MediaClass.VIDEO
-        )
+        media_class = MediaClass.IMAGE if media_type == "photos" else MediaClass.VIDEO
 
         if image_entity and hasattr(image_entity, "history"):
             for i, event in enumerate(image_entity.history):
