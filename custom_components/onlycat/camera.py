@@ -19,6 +19,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
 from .data.event import Event, EventUpdate
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -26,11 +27,12 @@ if TYPE_CHECKING:
     from .api import OnlyCatApiClient
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
-    from .image import OnlyCatLastImage
 
 _LOGGER = logging.getLogger(__name__)
 
 VIDEO_BASEURL = "https://gateway.onlycat.com/sharing/video/"
+THUMB_BASEURL = "https://gateway.onlycat.com/events/"
+
 ENTITY_DESCRIPTION = CameraEntityDescription(
     key="OnlyCat",
     name="Last activity video",
@@ -120,18 +122,33 @@ class OnlyCatLastVideo(Camera):
 
     async def async_camera_image(
         self,
-        width: int | None = None,  # noqa: ARG002
-        height: int | None = None,  # noqa: ARG002
+        width: int | None = None,
+        height: int | None = None,
     ) -> bytes | None:
-        """Return a still image response from the camera (thumbnail)."""
+        """Return a thumbnail image for the camera preview."""
         if not self._current_event:
             return None
 
-        image_entities = self.device.config_entry.runtime_data.image_entities
-        image_entity: OnlyCatLastImage = image_entities.get(self.device.device_id)
+        frame_to_show = (
+            self._current_event.poster_frame_index
+            if self._current_event.poster_frame_index is not None
+            else self._current_event.frame_count // 2
+            if self._current_event.frame_count is not None
+            else 1
+        )
 
-        if image_entity:
-            return await image_entity.async_image()
+        url = (
+            f"https://gateway.onlycat.com/events/"
+            f"{self._current_event.device_id}/"
+            f"{self._current_event.event_id}/"
+            f"{frame_to_show}"
+        )
+
+        session = async_get_clientsession(self.hass)
+
+        async with session.get(url) as resp:
+            if resp.status == 200:
+                return await resp.read()
 
         return None
 
