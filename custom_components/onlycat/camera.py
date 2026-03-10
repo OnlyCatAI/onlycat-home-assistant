@@ -56,6 +56,8 @@ async def async_setup_entry(
         for device in entry.runtime_data.devices
     ]
 
+    async_add_entities(entities)
+
     _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
         try:
@@ -63,8 +65,7 @@ async def async_setup_entry(
                 event="getDeviceEvents",
                 data={"deviceId": entity.device.device_id},
             )
-            if isinstance(events_response, list) and len(events_response) > 0:
-                # Sort events by timestamp descending to get the latest one
+            if isinstance(events_response, list) and events_response:
                 events_response.sort(
                     key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")),
                     reverse=True,
@@ -81,7 +82,6 @@ class OnlyCatLastVideo(Camera):
 
     _attr_has_entity_name = True
     _attr_supported_features = CameraEntityFeature.STREAM
-    # Force HLS stream type to prevent playback issues
     _attr_frontend_stream_type = StreamType.HLS
 
     @property
@@ -100,7 +100,7 @@ class OnlyCatLastVideo(Camera):
         api_client: OnlyCatApiClient,
     ) -> None:
         """Initialize the camera entity."""
-        Camera.__init__(self)
+        super().__init__()
         self.hass = hass
         self.entity_description = ENTITY_DESCRIPTION
         self.device: Device = device
@@ -117,9 +117,7 @@ class OnlyCatLastVideo(Camera):
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
     async def async_camera_image(
-        self,
-        width: int | None = None,  # noqa: ARG002
-        height: int | None = None,  # noqa: ARG002
+        self, *_args, **_kwargs
     ) -> bytes | None:
         """Return a thumbnail image for the camera preview."""
         if not self._current_event:
@@ -134,7 +132,7 @@ class OnlyCatLastVideo(Camera):
         )
 
         url = (
-            f"https://gateway.onlycat.com/events/"
+            f"{THUMB_BASEURL}"
             f"{self._current_event.device_id}/"
             f"{self._current_event.event_id}/"
             f"{frame_to_show}"
@@ -145,7 +143,6 @@ class OnlyCatLastVideo(Camera):
         async with session.get(url) as resp:
             if resp.status == HTTPStatus.OK:
                 return await resp.read()
-
         return None
 
     async def stream_source(self) -> str | None:
@@ -154,10 +151,7 @@ class OnlyCatLastVideo(Camera):
             return None
 
         event = self._current_event
-        # Construct the URL with the mandatory access token
-        return (
-            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
-        )
+        return f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
 
     @callback
     def _reset_stream(self) -> None:
@@ -173,7 +167,6 @@ class OnlyCatLastVideo(Camera):
         if event is None:
             return
 
-        # Ignore events that are older than the currently displayed one
         if (
             self._current_event
             and self._current_event.event_id is not None
@@ -182,7 +175,6 @@ class OnlyCatLastVideo(Camera):
         ):
             return
 
-        # If it's a new event ID, clear the old stream
         if self._current_event and self._current_event.event_id != event.event_id:
             self._reset_stream()
 
@@ -198,7 +190,6 @@ class OnlyCatLastVideo(Camera):
         if not event_update or not event_update.event:
             return
 
-        # Ignore older events
         if (
             self._current_event
             and self._current_event.event_id is not None
@@ -207,42 +198,21 @@ class OnlyCatLastVideo(Camera):
         ):
             return
 
-        # Check if this is a partial update for the current event
-        if (
-            self._current_event
-            and self._current_event.event_id == event_update.event_id
-        ):
+        if self._current_event and self._current_event.event_id == event_update.event_id:
             # Partial update to existing event
             self._current_event.update_from(event_update.event)
-            self.async_write_ha_state()
         else:
-            # Completely new event detected
+            # New event
             self._reset_stream()
-
             self._current_event = event_update.event
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
 
-            # If the token is missing, wait and fetch full details
-            if not self._current_event.access_token:
-                try:
-                    await asyncio.sleep(1.0)
-                    events_response = await self._api_client.send_message(
-                        event="getDeviceEvents",
-                        data={"deviceId": self.device.device_id},
-                    )
-                    if isinstance(events_response, list) and len(events_response) > 0:
-                        events_response.sort(
-                            key=lambda e: dt.datetime.fromisoformat(e.get("timestamp")),
-                            reverse=True,
-                        )
-                        latest_event = Event.from_api_response(events_response[0])
-                        if (
-                            latest_event
-                            and latest_event.event_id == self._current_event.event_id
-                        ):
-                            self._current_event.update_from(latest_event)
-                except Exception:
-                    _LOGGER.exception("Failed to fetch full new event details")
+        # access_token wird automatisch durch weitere eventUpdate-Events ergänzt
+        if not self._current_event.access_token:
+            _LOGGER.debug(
+                "Event %s received without access token yet",
+                self._current_event.event_id,
+            )
 
-            self.async_write_ha_state()
+        self.async_write_ha_state()
