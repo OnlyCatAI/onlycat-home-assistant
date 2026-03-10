@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import datetime as dt
 import logging
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from homeassistant.components.camera import (
@@ -15,11 +16,11 @@ from homeassistant.components.camera import (
     StreamType,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
 from .data.event import Event, EventUpdate
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -122,8 +123,8 @@ class OnlyCatLastVideo(Camera):
 
     async def async_camera_image(
         self,
-        width: int | None = None,
-        height: int | None = None,
+        _width: int | None = None,
+        _height: int | None = None,
     ) -> bytes | None:
         """Return a thumbnail image for the camera preview."""
         if not self._current_event:
@@ -147,7 +148,7 @@ class OnlyCatLastVideo(Camera):
         session = async_get_clientsession(self.hass)
 
         async with session.get(url) as resp:
-            if resp.status == 200:
+            if resp.status == HTTPStatus.OK:
                 return await resp.read()
 
         return None
