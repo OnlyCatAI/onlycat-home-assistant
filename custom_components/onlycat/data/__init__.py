@@ -30,5 +30,3 @@ class OnlyCatData:
     pets: list[Pet]
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
-    camera_entities: dict[str, Any]
-    image_entities: dict[str, Any]

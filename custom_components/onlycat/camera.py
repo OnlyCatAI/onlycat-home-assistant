@@ -56,11 +56,6 @@ async def async_setup_entry(
         for device in entry.runtime_data.devices
     ]
 
-    async_add_entities(entities)
-
-    for entity in entities:
-        entry.runtime_data.camera_entities[entity.device.device_id] = entity
-
     _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
         try:
