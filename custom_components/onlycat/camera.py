@@ -119,7 +119,11 @@ class OnlyCatLastVideo(Camera):
         api_client.add_event_listener("eventUpdate", self.on_event_update)
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
-    async def async_camera_image(self) -> bytes | None:
+    async def async_camera_image(
+        self,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> bytes | None:
         """Return a thumbnail image for the camera preview."""
         if not self._current_event:
             return None
@@ -133,12 +137,13 @@ class OnlyCatLastVideo(Camera):
         )
 
         url = (
-            f"{THUMB_BASEURL}{self._current_event.device_id}/"
-            f"{self._current_event.event_id}/{frame_to_show}"
+            f"{THUMB_BASEURL}"
+            f"{self._current_event.device_id}/"
+            f"{self._current_event.event_id}/"
+            f"{frame_to_show}"
         )
 
         session = async_get_clientsession(self.hass)
-
         async with session.get(url) as resp:
             if resp.status == HTTPStatus.OK:
                 return await resp.read()
