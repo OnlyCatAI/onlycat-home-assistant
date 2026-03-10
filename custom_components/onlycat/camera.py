@@ -123,8 +123,8 @@ class OnlyCatLastVideo(Camera):
 
     async def async_camera_image(
         self,
-        _width: int | None = None,
-        _height: int | None = None,
+        width: int | None = None,  # noqa: ARG002
+        height: int | None = None,  # noqa: ARG002
     ) -> bytes | None:
         """Return a thumbnail image for the camera preview."""
         if not self._current_event:
