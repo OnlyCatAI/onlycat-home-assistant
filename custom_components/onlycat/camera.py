@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import datetime as dt
 import logging
@@ -47,6 +46,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the camera platform."""
+    if not hasattr(entry.runtime_data, "camera_entities"):
+        entry.runtime_data.camera_entities = {}
+
     entities: list[OnlyCatLastVideo] = [
         OnlyCatLastVideo(
             hass=hass,
@@ -60,6 +62,7 @@ async def async_setup_entry(
 
     _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
+        entry.runtime_data.camera_entities[entity.device.device_id] = entity
         try:
             events_response = await entry.runtime_data.client.send_message(
                 event="getDeviceEvents",
@@ -102,8 +105,8 @@ class OnlyCatLastVideo(Camera):
         """Initialize the camera entity."""
         super().__init__()
         self.hass = hass
-        self.entity_description = ENTITY_DESCRIPTION
         self.device: Device = device
+        self.entity_description = ENTITY_DESCRIPTION
         self._current_event: Event | None = None
         self._attr_unique_id = (
             device.device_id.replace("-", "_").lower() + "_last_activity_video"
@@ -112,13 +115,11 @@ class OnlyCatLastVideo(Camera):
         self.entity_id = "camera." + self._attr_unique_id
         self._cached_image: bytes | None = None
 
-        # Listen for real-time event updates
+        # Listen für Echtzeit-Updates
         api_client.add_event_listener("eventUpdate", self.on_event_update)
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
 
-    async def async_camera_image(
-        self, *_args, **_kwargs
-    ) -> bytes | None:
+    async def async_camera_image(self) -> bytes | None:
         """Return a thumbnail image for the camera preview."""
         if not self._current_event:
             return None
@@ -132,10 +133,8 @@ class OnlyCatLastVideo(Camera):
         )
 
         url = (
-            f"{THUMB_BASEURL}"
-            f"{self._current_event.device_id}/"
-            f"{self._current_event.event_id}/"
-            f"{frame_to_show}"
+            f"{THUMB_BASEURL}{self._current_event.device_id}/"
+            f"{self._current_event.event_id}/{frame_to_show}"
         )
 
         session = async_get_clientsession(self.hass)
@@ -143,6 +142,7 @@ class OnlyCatLastVideo(Camera):
         async with session.get(url) as resp:
             if resp.status == HTTPStatus.OK:
                 return await resp.read()
+
         return None
 
     async def stream_source(self) -> str | None:
@@ -151,7 +151,10 @@ class OnlyCatLastVideo(Camera):
             return None
 
         event = self._current_event
-        return f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
+        return (
+            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}"
+            f"?t={event.access_token}"
+        )
 
     @callback
     def _reset_stream(self) -> None:
@@ -164,7 +167,7 @@ class OnlyCatLastVideo(Camera):
     @callback
     def update_event(self, event: Event | None) -> None:
         """Update the entity with new event data."""
-        if event is None:
+        if not event:
             return
 
         if (
@@ -198,21 +201,15 @@ class OnlyCatLastVideo(Camera):
         ):
             return
 
-        if self._current_event and self._current_event.event_id == event_update.event_id:
-            # Partial update to existing event
+        if (
+            self._current_event
+            and self._current_event.event_id == event_update.event_id
+        ):
             self._current_event.update_from(event_update.event)
+            self.async_write_ha_state()
         else:
-            # New event
             self._reset_stream()
             self._current_event = event_update.event
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
-
-        # access_token wird automatisch durch weitere eventUpdate-Events ergänzt
-        if not self._current_event.access_token:
-            _LOGGER.debug(
-                "Event %s received without access token yet",
-                self._current_event.event_id,
-            )
-
-        self.async_write_ha_state()
+            self.async_write_ha_state()
