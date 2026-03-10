@@ -157,8 +157,7 @@ class OnlyCatLastVideo(Camera):
 
         event = self._current_event
         return (
-            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}"
-            f"?t={event.access_token}"
+            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
         )
 
     @callback
