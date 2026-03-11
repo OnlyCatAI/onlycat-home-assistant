@@ -72,7 +72,6 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         self.determine_new_state(self._current_event)
         self.async_write_ha_state()
 
-
     async def on_event_update(self, data: dict) -> None:
         """Handle event update event."""
         if data["deviceId"] != self.device.device_id:
