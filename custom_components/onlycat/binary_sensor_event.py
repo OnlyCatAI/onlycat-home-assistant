@@ -61,6 +61,14 @@ class OnlyCatEventSensor(BinarySensorEntity):
 
         api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
         api_client.add_event_listener("eventUpdate", self.on_event_update)
+        api_client.add_event_listener("getEvent", self.on_event)
+
+    async def on_event(self, data: dict) -> None:
+        """Handle bare event like returned from getEvent."""
+        if data["deviceId"] != self.device.device_id:
+            return
+        self.determine_new_state(Event.from_api_response(data))
+        self.async_write_ha_state()
 
     async def on_event_update(self, data: dict) -> None:
         """Handle event update event."""
