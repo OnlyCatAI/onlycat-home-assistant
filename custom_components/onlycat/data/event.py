@@ -149,9 +149,6 @@ class EventUpdate:
         )
         event = Event.from_api_response(body)
 
-        # If body was empty, event might be None, but
-        # EventUpdate expects an Event object.
-        # Fallback to an empty Event if needed.
         if event is None:
             event = Event()
 

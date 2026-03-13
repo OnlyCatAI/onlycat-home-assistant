@@ -399,7 +399,6 @@ class DeviceTransitPolicy:
                 event.event_id,
             )
             return PolicyResult.UNKNOWN
-
         if self.transit_policy.rules:
             for rule in self.transit_policy.rules:
                 if not rule.enabled:
