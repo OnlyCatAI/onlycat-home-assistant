@@ -30,19 +30,20 @@ async def async_setup_entry(
         for sensor in (
             OnlyCatEventSensor(
                 device=device,
-                api_client=entry.runtime_data.client,
+                event_store=entry.runtime_data.event_store,
             ),
             OnlyCatContrabandSensor(
                 device=device,
-                api_client=entry.runtime_data.client,
+                event_store=entry.runtime_data.event_store,
             ),
             OnlyCatLockSensor(
                 device=device,
+                event_store=entry.runtime_data.event_store,
                 api_client=entry.runtime_data.client,
             ),
             OnlyCatHumanSensor(
                 device=device,
-                api_client=entry.runtime_data.client,
+                event_store=entry.runtime_data.event_store,
             ),
             OnlyCatConnectionSensor(
                 device=device,

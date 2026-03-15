@@ -19,6 +19,7 @@ from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device
 from .data.event import Event
+from .data.event_store import EventStore
 from .data.pet import Pet
 from .services import async_setup_services
 
@@ -42,12 +43,14 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
+    client = OnlyCatApiClient(
+        token=entry.data["token"], session=async_get_clientsession(hass)
+    )
     entry.runtime_data = OnlyCatData(
-        client=OnlyCatApiClient(
-            token=entry.data["token"], session=async_get_clientsession(hass)
-        ),
+        client=client,
         devices=[],
         pets=[],
+        event_store=EventStore(api_client=client),
         settings=entry.data["settings"],
         coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
     )
@@ -67,22 +70,17 @@ async def async_setup_entry(
                 "getDeviceEvents", {"deviceId": device.device_id, "subscribe": True}
             )
 
-    async def subscribe_to_device_event(data: dict) -> None:
-        """Subscribe to a device event to get updates about the event in the future."""
-        await entry.runtime_data.client.send_message(
-            "getEvent",
-            {
-                "deviceId": data["deviceId"],
-                "eventId": data["eventId"],
-                "subscribe": True,
-            },
-        )
-
     await refresh_subscriptions(None)
     entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)
     entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
     entry.runtime_data.client.add_event_listener(
-        "deviceEventUpdate", subscribe_to_device_event
+        "deviceEventUpdate", entry.runtime_data.event_store.on_device_event_update
+    )
+    entry.runtime_data.client.add_event_listener(
+        "eventUpdate", entry.runtime_data.event_store.on_event_update
+    )
+    entry.runtime_data.client.add_event_listener(
+        "getEvent", entry.runtime_data.event_store.on_get_event
     )
 
     await async_setup_services(hass, entry)
@@ -183,7 +181,7 @@ async def async_migrate_entry(
     hass: HomeAssistant, config_entry: OnlyCatConfigEntry
 ) -> bool:
     """Migrate old entry."""
-    _LOGGER.debug(
+    _LOGGER.info(
         "Migrating configuration from version %s.%s",
         config_entry.version,
         config_entry.minor_version,
