@@ -19,7 +19,12 @@ class EventStore:
         self._current_events: dict[str, Event] = {}
         self._api_client: OnlyCatApiClient = api_client
 
-    async def send_get_event_message(self, device_id: str, event_id: int, subscribe: bool = True) -> None:
+    async def send_get_event_message(
+        self,
+        device_id: str,
+        event_id: int,
+        subscribe: bool = True,  # noqa: FBT001,FBT002
+    ) -> None:
         """Send getEvent message to get latest full event."""
         await self._api_client.send_message(
             "getEvent",
@@ -44,7 +49,9 @@ class EventStore:
         else:
             self._current_events[update.device_id].update_from(update.event)
         if self._current_events[update.device_id].frame_count is not None:
-            await self.send_get_event_message(update.device_id, update.event_id, subscribe=False)
+            await self.send_get_event_message(
+                update.device_id, update.event_id, subscribe=False
+            )
             return
         await self.run_listeners(update.device_id)
 
