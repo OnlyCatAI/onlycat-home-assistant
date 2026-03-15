@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from custom_components.onlycat.coordinator import OnlyCatDataUpdateCoordinator
 
     from .device import Device
+    from .event_store import EventStore
     from .pet import Pet
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,5 +29,6 @@ class OnlyCatData:
     client: OnlyCatApiClient
     devices: list[Device]
     pets: list[Pet]
+    event_store: EventStore
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator

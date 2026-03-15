@@ -57,7 +57,7 @@ class Pet:
 
         policy_result = self.device.device_transit_policy.determine_policy_result(event)
         if policy_result == PolicyResult.LOCKED:
-            _LOGGER.debug("Transit was not allowed, ignoring event for %s.", pet_name)
+            _LOGGER.info("Transit was not allowed, ignoring event for %s.", pet_name)
             return None
         if policy_result == PolicyResult.UNKNOWN:
             _LOGGER.debug(
@@ -67,7 +67,7 @@ class Pet:
             return None
 
         result = event.event_trigger_source == EventTriggerSource.OUTDOOR_MOTION
-        _LOGGER.debug(
+        _LOGGER.info(
             "Transit was allowed, assuming %s is %s",
             pet_name,
             "present" if result else "not present",
