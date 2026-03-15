@@ -183,7 +183,7 @@ async def async_migrate_entry(
     hass: HomeAssistant, config_entry: OnlyCatConfigEntry
 ) -> bool:
     """Migrate old entry."""
-    _LOGGER.debug(
+    _LOGGER.info(
         "Migrating configuration from version %s.%s",
         config_entry.version,
         config_entry.minor_version,

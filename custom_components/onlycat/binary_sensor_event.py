@@ -81,7 +81,7 @@ class OnlyCatEventSensor(BinarySensorEntity):
     def determine_new_state(self, event: Event) -> None:
         """Determine the new state of the sensor based on the event."""
         if (self._attr_extra_state_attributes.get("eventId")) != event.event_id:
-            _LOGGER.debug(
+            _LOGGER.info(
                 "Event ID has changed (%s -> %s), updating state.",
                 self._attr_extra_state_attributes.get("eventId"),
                 event.event_id,
