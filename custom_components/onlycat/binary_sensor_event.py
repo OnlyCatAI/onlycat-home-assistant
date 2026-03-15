@@ -13,13 +13,14 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event, EventUpdate
 
 _LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .api import OnlyCatApiClient
     from .data.device import Device
+    from .data.event import Event
+    from .data.event_store import EventStore
+
 
 ENTITY_DESCRIPTION = BinarySensorEntityDescription(
     key="OnlyCat",
@@ -47,7 +48,7 @@ class OnlyCatEventSensor(BinarySensorEntity):
     def __init__(
         self,
         device: Device,
-        api_client: OnlyCatApiClient,
+        event_store: EventStore,
     ) -> None:
         """Initialize the sensor class."""
         self.entity_description = ENTITY_DESCRIPTION
@@ -56,30 +57,17 @@ class OnlyCatEventSensor(BinarySensorEntity):
         self._attr_raw_data = None
         self.device: Device = device
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_event"
-        self._api_client = api_client
+        self._event_store = event_store
         self.entity_id = "sensor." + self._attr_unique_id
 
-        api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
-        api_client.add_event_listener("eventUpdate", self.on_event_update)
-        api_client.add_event_listener("getEvent", self.on_event)
+        self._event_store.add_event_listener(
+            self.device.device_id, self.on_event_update
+        )
 
-    async def on_event(self, data: dict) -> None:
-        """Handle bare event like returned from getEvent."""
-        if data["deviceId"] != self.device.device_id:
+    async def on_event_update(self, event: Event) -> None:
+        """Handle event update."""
+        if not event:
             return
-        self.determine_new_state(Event.from_api_response(data))
-        self.async_write_ha_state()
-
-    async def on_event_update(self, data: dict) -> None:
-        """Handle event update event."""
-        if data["deviceId"] != self.device.device_id:
-            return
-
-        self.determine_new_state(EventUpdate.from_api_response(data).event)
-        self.async_write_ha_state()
-
-    def determine_new_state(self, event: Event) -> None:
-        """Determine the new state of the sensor based on the event."""
         if (self._attr_extra_state_attributes.get("eventId")) != event.event_id:
             _LOGGER.info(
                 "Event ID has changed (%s -> %s), updating state.",
@@ -106,3 +94,4 @@ class OnlyCatEventSensor(BinarySensorEntity):
                 )
             if event.rfid_codes:
                 self._attr_extra_state_attributes["rfidCodes"] = event.rfid_codes
+        self.async_write_ha_state()

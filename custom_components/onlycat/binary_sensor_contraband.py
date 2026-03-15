@@ -13,13 +13,14 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event, EventClassification, EventUpdate
+from .data.event import Event, EventClassification
 
 _LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .api import OnlyCatApiClient
     from .data.device import Device
+    from .data.event import Event
+    from .data.event_store import EventStore
 
 ENTITY_DESCRIPTION = BinarySensorEntityDescription(
     key="OnlyCat",
@@ -48,49 +49,28 @@ class OnlyCatContrabandSensor(BinarySensorEntity):
     def __init__(
         self,
         device: Device,
-        api_client: OnlyCatApiClient,
+        event_store: EventStore,
     ) -> None:
         """Initialize the sensor class."""
         self.entity_description = ENTITY_DESCRIPTION
         self._attr_is_on = False
         self._attr_raw_data = None
         self.device: Device = device
-        self._current_event: Event = Event()
         self._attr_unique_id = (
             device.device_id.replace("-", "_").lower() + "_contraband"
         )
-        self._api_client = api_client
+        self._event_store = event_store
         self.entity_id = "sensor." + self._attr_unique_id
+        self._event_store.add_event_listener(
+            self.device.device_id, self.on_event_update
+        )
 
-        api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
-        api_client.add_event_listener("eventUpdate", self.on_event_update)
-        api_client.add_event_listener("getEvent", self.on_event)
-
-    async def on_event(self, data: dict) -> None:
-        """Handle bare event like returned from getEvent."""
-        if data["deviceId"] != self.device.device_id:
-            return
-        self._current_event.update_from(Event.from_api_response(data))
-        self.determine_new_state(self._current_event)
-        self.async_write_ha_state()
-
-    async def on_event_update(self, data: dict) -> None:
+    async def on_event_update(self, event: Event) -> None:
         """Handle event update event."""
-        if data["deviceId"] != self.device.device_id:
-            return
-
-        self._current_event.update_from(EventUpdate.from_api_response(data).event)
-        self.determine_new_state(self._current_event)
-        self.async_write_ha_state()
-
-    def determine_new_state(self, event: Event) -> None:
-        """Determine the new state of the sensor based on the event."""
         if not event:
             return
-
         if event.frame_count:
             self._attr_is_on = False
-            self._current_event = Event()
         elif event.event_classification == EventClassification.CONTRABAND:
-            _LOGGER.debug("Contraband detected for event %s", event)
             self._attr_is_on = True
+        self.async_write_ha_state()
