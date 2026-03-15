@@ -8,3 +8,10 @@ python-socketio==5.16.1
 pycares==5.0.1
 jsonschema==4.26.0
 debugpy
+# Required for HA to run during development, taken from HA core requirements.txt
+hassil==3.5.0
+home-assistant-intents==2026.1.28
+mutagen==1.47.0
+ha-ffmpeg==3.2.2
+pymicro-vad==1.0.1
+pyspeex-noise==1.0.2
