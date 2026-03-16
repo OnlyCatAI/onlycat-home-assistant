@@ -120,7 +120,6 @@ class Event:
         """Update the event with data from another event instance."""
         if updated_event is None:
             return
-
         for field in fields(self):
             new_value = getattr(updated_event, field.name, []) or []
             if new_value is not None:

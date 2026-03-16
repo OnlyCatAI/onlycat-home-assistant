@@ -46,6 +46,8 @@ class EventStore:
             return
         if update.device_id not in self._current_events:
             self._current_events[update.device_id] = update.event
+        if self._current_events[update.device_id].event_id != update.event_id:
+            self._current_events[update.device_id] = update.event
         else:
             self._current_events[update.device_id].update_from(update.event)
         if self._current_events[update.device_id].frame_count is not None:
@@ -61,6 +63,8 @@ class EventStore:
         if not event:
             return
         if event.device_id not in self._current_events:
+            self._current_events[event.device_id] = event
+        if self._current_events[event.device_id].event_id != event.event_id:
             self._current_events[event.device_id] = event
         else:
             self._current_events[event.device_id].update_from(event)
