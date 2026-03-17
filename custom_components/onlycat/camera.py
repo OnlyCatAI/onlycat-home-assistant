@@ -19,14 +19,14 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event, EventUpdate
+from .data.event import Event
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .api import OnlyCatApiClient
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
+    from .data.event_store import EventStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,9 +51,7 @@ async def async_setup_entry(
 
     entities: list[OnlyCatLastVideo] = [
         OnlyCatLastVideo(
-            hass=hass,
-            device=device,
-            api_client=entry.runtime_data.client,
+            hass=hass, device=device, event_store=entry.runtime_data.event_store
         )
         for device in entry.runtime_data.devices
     ]
@@ -62,7 +60,6 @@ async def async_setup_entry(
 
     _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
-        entry.runtime_data.camera_entities[entity.device.device_id] = entity
         try:
             events_response = await entry.runtime_data.client.send_message(
                 event="getDeviceEvents",
@@ -97,10 +94,7 @@ class OnlyCatLastVideo(Camera):
         )
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        device: Device,
-        api_client: OnlyCatApiClient,
+        self, hass: HomeAssistant, device: Device, event_store: EventStore
     ) -> None:
         """Initialize the camera entity."""
         super().__init__()
@@ -111,13 +105,13 @@ class OnlyCatLastVideo(Camera):
         self._attr_unique_id = (
             device.device_id.replace("-", "_").lower() + "_last_activity_video"
         )
-        self._api_client = api_client
+        self._event_store = event_store
         self.entity_id = "camera." + self._attr_unique_id
         self._cached_image: bytes | None = None
 
-        # Listen für Echtzeit-Updates
-        api_client.add_event_listener("eventUpdate", self.on_event_update)
-        api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
+        self._event_store.add_event_listener(
+            self.device.device_id, self.on_event_update
+        )
 
     async def async_camera_image(
         self,
@@ -188,32 +182,20 @@ class OnlyCatLastVideo(Camera):
         self._current_event = event
         self.async_write_ha_state()
 
-    async def on_event_update(self, data: dict) -> None:
-        """Handle incoming event updates via WebSockets."""
-        if data.get("deviceId") != self.device.device_id:
-            return
-
-        event_update = EventUpdate.from_api_response(data)
-        if not event_update or not event_update.event:
-            return
-
+    async def on_event_update(self, event: Event) -> None:
+        """Handle event update."""
         if (
             self._current_event
             and self._current_event.event_id is not None
-            and event_update.event_id is not None
-            and event_update.event_id < self._current_event.event_id
+            and event.event_id is not None
+            and event.event_id < self._current_event.event_id
         ):
             return
 
-        if (
-            self._current_event
-            and self._current_event.event_id == event_update.event_id
-        ):
-            self._current_event.update_from(event_update.event)
+        if self._current_event and self._current_event.event_id == event.event_id:
+            self._current_event = event
             self.async_write_ha_state()
         else:
             self._reset_stream()
-            self._current_event = event_update.event
-            self._current_event.device_id = event_update.device_id
-            self._current_event.event_id = event_update.event_id
+            self._current_event = event
             self.async_write_ha_state()

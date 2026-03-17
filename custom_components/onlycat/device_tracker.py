@@ -14,7 +14,7 @@ from homeassistant.const import STATE_HOME, STATE_NOT_HOME
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event, EventUpdate
+from .data.event import Event
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,10 +22,12 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .api import OnlyCatApiClient
     from .data import OnlyCatConfigEntry
     from .data.device import Device
+    from .data.event import Event
+    from .data.event_store import EventStore
     from .data.pet import Pet
+
 
 ENTITY_DESCRIPTION = TrackerEntityDescription(
     key="OnlyCat",
@@ -46,10 +48,7 @@ async def async_setup_entry(
             sensor
             for pet in entry.runtime_data.pets
             for sensor in (
-                OnlyCatPetTracker(
-                    pet=pet,
-                    api_client=entry.runtime_data.client,
-                ),
+                OnlyCatPetTracker(pet=pet, event_store=entry.runtime_data.event_store),
             )
         )
 
@@ -76,20 +75,17 @@ class OnlyCatPetTracker(TrackerEntity):
         if present is not None:
             self._attr_location_name = STATE_HOME if present else STATE_NOT_HOME
 
-        if event.frame_count:
-            self._current_event = Event()
-
     def __init__(
         self,
         pet: Pet,
-        api_client: OnlyCatApiClient,
+        event_store: EventStore,
     ) -> None:
         """Initialize the sensor class."""
         self.entity_description = ENTITY_DESCRIPTION
         self._attr_raw_data = None
         self.device: Device = pet.device
         self.pet: Pet = pet
-        self._current_event: Event = Event()
+        self._event_store = event_store
         self.pet_name = pet.label if pet.label is not None else pet.rfid_code
         self._attr_translation_placeholders = {
             "pet_name": self.pet_name,
@@ -100,36 +96,19 @@ class OnlyCatPetTracker(TrackerEntity):
             + pet.rfid_code
             + "_tracker"
         )
-        self._api_client = api_client
         self.entity_id = "sensor." + self._attr_unique_id
         self._attr_location_name = STATE_NOT_HOME
         if pet.last_seen_event:
             self.determine_new_state(pet.last_seen_event)
+        self._event_store.add_event_listener(
+            self.device.device_id, self.on_event_update
+        )
 
-        api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
-        api_client.add_event_listener("eventUpdate", self.on_event_update)
-        api_client.add_event_listener("getEvent", self.on_event)
-
-    async def on_event(self, data: dict) -> None:
-        """Handle bare event like returned from getEvent."""
-        if data["deviceId"] != self.device.device_id:
-            return
-        self._current_event.update_from(Event.from_api_response(data))
-        self.determine_new_state(self._current_event)
-        self.async_write_ha_state()
-
-    async def on_event_update(self, data: dict) -> None:
+    async def on_event_update(self, event: Event) -> None:
         """Handle event update event."""
-        if data["deviceId"] != self.device.device_id:
+        if event.rfid_codes is None or self.pet.rfid_code not in event.rfid_codes:
             return
-
-        self._current_event.update_from(EventUpdate.from_api_response(data).event)
-        if (
-            self._current_event.rfid_codes is None
-            or self.pet.rfid_code not in self._current_event.rfid_codes
-        ):
-            return
-        self.determine_new_state(self._current_event)
+        self.determine_new_state(event)
         self.async_write_ha_state()
 
     async def manual_update_location(self, location: str) -> None:

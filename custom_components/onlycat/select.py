@@ -135,7 +135,7 @@ class OnlyCatPolicySelect(CoordinatorEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Activate a device policy."""
-        _LOGGER.debug("Setting policy %s for device %s", option, self.device.device_id)
+        _LOGGER.info("Setting policy %s for device %s", option, self.device.device_id)
         policy_id = next(
             (
                 key

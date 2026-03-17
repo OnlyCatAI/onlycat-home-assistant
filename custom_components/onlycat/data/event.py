@@ -113,17 +113,19 @@ class Event:
             else None,
             poster_frame_index=api_event.get("posterFrameIndex"),
             access_token=api_event.get("accessToken"),
-            rfid_codes=api_event.get("rfidCodes", []),
+            rfid_codes=api_event.get("rfidCodes") or [],
         )
 
     def update_from(self, updated_event: Event) -> None:
         """Update the event with data from another event instance."""
         if updated_event is None:
             return
-
         for field in fields(self):
-            new_value = getattr(updated_event, field.name, None)
+            new_value = getattr(updated_event, field.name, []) or []
             if new_value is not None:
+                if field.name == "rfid_codes":
+                    old_value = getattr(self, field.name) or []
+                    new_value = old_value + new_value
                 setattr(self, field.name, new_value)
 
 
