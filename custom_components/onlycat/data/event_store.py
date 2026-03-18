@@ -17,6 +17,7 @@ class EventStore:
         """Initialize EventStore with given api client."""
         self._event_update_listeners: dict[str, list[Callable]] = {}
         self._current_events: dict[str, Event] = {}
+        self._current_images: dict[str, bytes] = {}
         self._api_client: OnlyCatApiClient = api_client
 
     async def send_get_event_message(
@@ -72,6 +73,8 @@ class EventStore:
 
     async def run_listeners(self, device_id: str) -> None:
         """Call all listeners for a given device."""
+        if device_id not in self._event_update_listeners:
+            return
         for callback in self._event_update_listeners[device_id]:
             await callback(self._current_events.get(device_id, None))
 
@@ -80,3 +83,11 @@ class EventStore:
         if device_id not in self._event_update_listeners:
             self._event_update_listeners[device_id] = []
         self._event_update_listeners[device_id].append(callback)
+
+    def get_current_image(self, device_id: str) -> bytes | None:
+        """Return cached image for given device."""
+        return self._current_images.get(device_id, None)
+
+    def set_current_image(self, device_id: str, image: bytes) -> None:
+        """Cache image for given device."""
+        self._current_images[device_id] = image
