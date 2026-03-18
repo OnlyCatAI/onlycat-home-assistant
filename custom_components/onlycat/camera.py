@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import datetime as dt
 import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING
@@ -18,7 +17,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -26,6 +24,7 @@ if TYPE_CHECKING:
 
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
+    from .data.event import Event
     from .data.event_store import EventStore
 
 _LOGGER = logging.getLogger(__name__)
