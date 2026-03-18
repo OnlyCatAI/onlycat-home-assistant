@@ -14,4 +14,4 @@ home-assistant-intents==2026.1.28
 mutagen==1.47.0
 ha-ffmpeg==3.2.2
 pymicro-vad==1.0.1
-pyspeex-noise==1.0.2
+pyspeex-noise==2.0.0
