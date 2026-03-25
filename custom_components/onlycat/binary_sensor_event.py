@@ -68,6 +68,18 @@ class OnlyCatEventSensor(BinarySensorEntity):
         """Handle event update."""
         if not event:
             return
+        self._attr_extra_state_attributes = {
+            "eventId": event.event_id,
+            "timestamp": event.timestamp,
+            "eventTriggerSource": event.event_trigger_source.name,
+        }
+        if event.event_classification:
+            self._attr_extra_state_attributes["eventClassification"] = (
+                event.event_classification.name
+            )
+        if event.rfid_codes:
+            self._attr_extra_state_attributes["rfidCodes"] = event.rfid_codes
+
         if (self._attr_extra_state_attributes.get("eventId")) != event.event_id:
             _LOGGER.info(
                 "Event ID has changed (%s -> %s), updating state.",
@@ -75,23 +87,7 @@ class OnlyCatEventSensor(BinarySensorEntity):
                 event.event_id,
             )
             self._attr_is_on = True
-
-            self._attr_extra_state_attributes = {
-                "eventId": event.event_id,
-                "timestamp": event.timestamp,
-                "eventTriggerSource": event.event_trigger_source.name,
-            }
-            if event.rfid_codes:
-                self._attr_extra_state_attributes["rfidCodes"] = event.rfid_codes
-        elif event.frame_count:
+        if event.frame_count:
             # Frame count is present, event is concluded
             self._attr_is_on = False
-            self._attr_extra_state_attributes = {}
-        else:
-            if event.event_classification:
-                self._attr_extra_state_attributes["eventClassification"] = (
-                    event.event_classification.name
-                )
-            if event.rfid_codes:
-                self._attr_extra_state_attributes["rfidCodes"] = event.rfid_codes
         self.async_write_ha_state()
