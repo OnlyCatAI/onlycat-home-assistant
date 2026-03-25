@@ -10,7 +10,7 @@ jsonschema==4.26.0
 debugpy
 # Required for HA to run during development, taken from HA core requirements.txt
 hassil==3.5.0
-home-assistant-intents==2026.3.3
+home-assistant-intents==2026.3.24
 mutagen==1.47.0
 ha-ffmpeg==3.2.2
 pymicro-vad==2.0.1
