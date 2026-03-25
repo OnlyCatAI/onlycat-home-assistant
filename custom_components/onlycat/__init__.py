@@ -32,6 +32,7 @@ PLATFORMS: list[Platform] = [
     Platform.DEVICE_TRACKER,
     Platform.BUTTON,
     Platform.SENSOR,
+    Platform.IMAGE,
     Platform.CAMERA,
 ]
 _LOGGER = logging.getLogger(__name__)
@@ -60,19 +61,6 @@ async def async_setup_entry(
     await _initialize_pets(entry)
     await entry.runtime_data.coordinator.async_config_entry_first_refresh()
 
-    async def refresh_subscriptions(args: dict | None) -> None:
-        _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)
-        for device in entry.runtime_data.devices:
-            await entry.runtime_data.client.send_message(
-                "getDevice", {"deviceId": device.device_id, "subscribe": True}
-            )
-            await entry.runtime_data.client.send_message(
-                "getDeviceEvents", {"deviceId": device.device_id, "subscribe": True}
-            )
-
-    await refresh_subscriptions(None)
-    entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)
-    entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
     entry.runtime_data.client.add_event_listener(
         "deviceEventUpdate", entry.runtime_data.event_store.on_device_event_update
     )
@@ -83,8 +71,32 @@ async def async_setup_entry(
         "getEvent", entry.runtime_data.event_store.on_get_event
     )
 
+    async def refresh_subscriptions(args: dict | None) -> None:
+        _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)
+        for device in entry.runtime_data.devices:
+            await entry.runtime_data.client.send_message(
+                "getDevice", {"deviceId": device.device_id, "subscribe": True}
+            )
+            events = await entry.runtime_data.client.send_message(
+                "getDeviceEvents", {"deviceId": device.device_id, "subscribe": True}
+            )
+            if events:
+                events.sort(
+                    key=lambda e: datetime.fromisoformat(e.get("timestamp")),
+                    reverse=True,
+                )
+            if events and "eventId" in events[0]:
+                await entry.runtime_data.event_store.send_get_event_message(
+                    device.device_id, events[0]["eventId"], subscribe=False
+                )
+
+    await refresh_subscriptions(None)
+    entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)
+    entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
     await async_setup_services(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    for device in entry.runtime_data.devices:
+        await entry.runtime_data.event_store.run_listeners(device.device_id)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 

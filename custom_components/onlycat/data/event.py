@@ -125,7 +125,7 @@ class Event:
             if new_value is not None:
                 if field.name == "rfid_codes":
                     old_value = getattr(self, field.name) or []
-                    new_value = old_value + new_value
+                    new_value = old_value + list(set(new_value) - set(old_value))
                 setattr(self, field.name, new_value)
 
 
