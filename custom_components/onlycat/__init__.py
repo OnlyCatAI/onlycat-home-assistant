@@ -82,7 +82,7 @@ async def async_setup_entry(
             )
             if events:
                 events.sort(
-                    key=lambda e: datetime.fromisoformat(e.get("timestamp")),
+                    key=lambda e: datetime.fromisoformat(e.get("timestamp", datetime.min.isoformat())),
                     reverse=True,
                 )
             if events and "eventId" in events[0]:
