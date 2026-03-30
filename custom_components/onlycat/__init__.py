@@ -8,7 +8,7 @@ https://github.com/OnlyCatAI/onlycat-home-assistant
 from __future__ import annotations
 
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
