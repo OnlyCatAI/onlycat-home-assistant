@@ -210,5 +210,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _validate_connection(self, client: OnlyCatApiClient) -> None:
         """Validate connection."""
         await client.connect()
-        await client.send_message("getDevices", {"subscribe": False})
+        response = await client.send_message("getDevices", {"subscribe": False})
+        if response["code"] == 401:
+            raise OnlyCatApiClientAuthenticationError("Invalid access token")
         await client.disconnect()

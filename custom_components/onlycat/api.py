@@ -66,13 +66,16 @@ class OnlyCatApiClient:
             return
         _LOGGER.debug("Connecting to API")
 
-        await self._socket.connect(
-            ONLYCAT_URL,
-            transports=["websocket"],
-            namespaces="/",
-            headers={"platform": "home-assistant", "device": "onlycat-hass"},
-            auth={"token": self._token},
-        )
+        try:
+            await self._socket.connect(
+                ONLYCAT_URL,
+                transports=["websocket"],
+                namespaces="/",
+                headers={"platform": "home-assistant", "device": "onlycat-hass"},
+                auth={"token": self._token},
+            )
+        except Exception as exception:
+            raise OnlyCatApiClientError from exception
 
     async def disconnect(self) -> None:
         """Disconnect websocket client."""
@@ -108,11 +111,11 @@ class OnlyCatApiClient:
         )
         try:
             reply = await self._socket.call(event, data)
-        except Exception:
+        except Exception as exception:
             _LOGGER.exception(
                 "Error during socket.call for event %s with data %s", event, data
             )
-            raise
+            raise OnlyCatApiClientCommunicationError from exception
         _LOGGER.debug("Received reply for event %s: %s", event, reply)
         for callback in self._listeners[event]:
             try:

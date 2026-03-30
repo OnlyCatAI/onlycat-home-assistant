@@ -8,7 +8,7 @@ https://github.com/OnlyCatAI/onlycat-home-assistant
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
@@ -85,7 +85,7 @@ async def async_setup_entry(
                     key=lambda e: datetime.fromisoformat(
                         e.get(
                             "timestamp",
-                            datetime.min.replace(tzinfo=datetime.UTC).isoformat(),
+                            datetime.min.replace(tzinfo=UTC).isoformat(),
                         )
                     ),
                     reverse=True,
@@ -158,9 +158,9 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             except TypeError:
                 last_seen = None
             rfid_profile = await entry.runtime_data.client.send_message(
-                "getRfidProfile", {"rfidCode": rfid_code}
+                "getRfidProfile", {"deviceId": device.device_id, "rfidCode": rfid_code}
             )
-            label = rfid_profile.get("label")
+            label = rfid_profile.get("label", rfid_code)
             pet = Pet(device, rfid_code, last_seen, label=label)
             _LOGGER.debug(
                 "Found Pet %s for device %s",
