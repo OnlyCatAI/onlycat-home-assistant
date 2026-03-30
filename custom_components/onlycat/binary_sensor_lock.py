@@ -58,7 +58,7 @@ class OnlyCatLockSensor(BinarySensorEntity):
         self._attr_is_on = self.device.is_unlocked_in_idle_state()
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_lock"
         self._event_store = event_store
-        self.entity_id = "sensor." + self._attr_unique_id
+        self.entity_id = "binary_sensor." + self._attr_unique_id
 
         self._event_store.add_event_listener(
             self.device.device_id, self.on_event_update

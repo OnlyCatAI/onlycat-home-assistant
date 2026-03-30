@@ -60,7 +60,7 @@ class OnlyCatContrabandSensor(BinarySensorEntity):
             device.device_id.replace("-", "_").lower() + "_contraband"
         )
         self._event_store = event_store
-        self.entity_id = "sensor." + self._attr_unique_id
+        self.entity_id = "binary_sensor." + self._attr_unique_id
         self._event_store.add_event_listener(
             self.device.device_id, self.on_event_update
         )

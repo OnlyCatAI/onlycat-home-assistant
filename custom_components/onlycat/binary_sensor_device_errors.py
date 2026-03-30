@@ -63,7 +63,7 @@ class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
         self.device: Device = device
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_errors"
         self._api_client = api_client
-        self.entity_id = "sensor." + self._attr_unique_id
+        self.entity_id = "binary_sensor." + self._attr_unique_id
         self.coordinator.async_add_listener(self._handle_coordinator_update)
 
     @callback

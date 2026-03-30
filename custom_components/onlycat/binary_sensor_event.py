@@ -58,7 +58,7 @@ class OnlyCatEventSensor(BinarySensorEntity):
         self.device: Device = device
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_event"
         self._event_store = event_store
-        self.entity_id = "sensor." + self._attr_unique_id
+        self.entity_id = "binary_sensor." + self._attr_unique_id
 
         self._event_store.add_event_listener(
             self.device.device_id, self.on_event_update
@@ -68,6 +68,13 @@ class OnlyCatEventSensor(BinarySensorEntity):
         """Handle event update."""
         if not event:
             return
+        if (self._attr_extra_state_attributes.get("eventId")) != event.event_id:
+            _LOGGER.info(
+                "Event ID has changed (%s -> %s), updating state.",
+                self._attr_extra_state_attributes.get("eventId"),
+                event.event_id,
+            )
+            self._attr_is_on = True
         self._attr_extra_state_attributes = {
             "eventId": event.event_id,
             "timestamp": event.timestamp,
@@ -79,14 +86,6 @@ class OnlyCatEventSensor(BinarySensorEntity):
             )
         if event.rfid_codes:
             self._attr_extra_state_attributes["rfidCodes"] = event.rfid_codes
-
-        if (self._attr_extra_state_attributes.get("eventId")) != event.event_id:
-            _LOGGER.info(
-                "Event ID has changed (%s -> %s), updating state.",
-                self._attr_extra_state_attributes.get("eventId"),
-                event.event_id,
-            )
-            self._attr_is_on = True
         if event.frame_count:
             # Frame count is present, event is concluded
             self._attr_is_on = False

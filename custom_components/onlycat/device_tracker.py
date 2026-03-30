@@ -96,7 +96,7 @@ class OnlyCatPetTracker(TrackerEntity):
             + pet.rfid_code
             + "_tracker"
         )
-        self.entity_id = "sensor." + self._attr_unique_id
+        self.entity_id = "device_tracker." + self._attr_unique_id
         self._attr_location_name = STATE_NOT_HOME
         if pet.last_seen_event:
             self.determine_new_state(pet.last_seen_event)
