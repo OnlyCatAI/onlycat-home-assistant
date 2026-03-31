@@ -212,6 +212,9 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Validate connection."""
         await client.connect()
         response = await client.send_message("getDevices", {"subscribe": False})
+        if "code" not in response:
+            error_msg = f"Unexpected response from OnlyCat API: 'code' field is missing in {response}"
+            raise OnlyCatApiClientError(error_msg)
         if response["code"] == ONLYCAT_API_STATUS_CODES["UNAUTHORIZED"]:
             error_msg = "Invalid access token"
             raise OnlyCatApiClientAuthenticationError(error_msg)
