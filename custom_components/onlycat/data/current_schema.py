@@ -197,7 +197,7 @@ DEVICE_POLICY_SCHEMA = {
                                 "additionalProperties": False,
                             },
                         },
-                        "required": ["criteria", "action"],
+                        "required": ["action"],
                         "additionalProperties": False,
                     },
                 },

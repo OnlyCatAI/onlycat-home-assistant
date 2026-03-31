@@ -23,6 +23,7 @@ from .const import (
     CONF_POLL_INTERVAL_HOURS,
     DOMAIN,
     LOGGER,
+    ONLYCAT_API_STATUS_CODES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -210,5 +211,8 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _validate_connection(self, client: OnlyCatApiClient) -> None:
         """Validate connection."""
         await client.connect()
-        await client.send_message("getDevices", {"subscribe": False})
+        response = await client.send_message("getDevices", {"subscribe": False})
+        if response["code"] == ONLYCAT_API_STATUS_CODES["UNAUTHORIZED"]:
+            error_msg = "Invalid access token"
+            raise OnlyCatApiClientAuthenticationError(error_msg)
         await client.disconnect()
