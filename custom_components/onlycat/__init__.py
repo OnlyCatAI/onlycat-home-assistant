@@ -86,7 +86,8 @@ async def async_setup_entry(
                         e.get(
                             "timestamp",
                             None,
-                        ) or datetime.min.replace(tzinfo=UTC).isoformat()
+                        )
+                        or datetime.min.replace(tzinfo=UTC).isoformat()
                     ),
                     reverse=True,
                 )
