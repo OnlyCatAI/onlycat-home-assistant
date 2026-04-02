@@ -75,8 +75,10 @@ class EventStore:
         """Call all listeners for a given device."""
         if device_id not in self._event_update_listeners:
             return
-        for callback in self._event_update_listeners[device_id]:
-            await callback(self._current_events.get(device_id, None))
+        event = self._current_events.get(device_id, None)
+        if event is not None:
+            for callback in self._event_update_listeners[device_id]:
+                await callback(event)
 
     def add_event_listener(self, device_id: str, callback: Callable) -> None:
         """Add function to a devices listener list."""
