@@ -10,14 +10,7 @@ from custom_components.onlycat.data.event_store import EventStore
 
 @pytest.mark.asyncio
 async def test_run_listeners_no_current_event() -> None:
-    """
-    Test run_listeners when listeners are registered but no event data exists.
-
-    Simulates the real setup where all entity types register an on_event_update
-    callback (binary_sensor_lock, binary_sensor_contraband, binary_sensor_event,
-    binary_sensor_human, camera, image, device_tracker) but _current_events and
-    _current_images are empty. None of the callbacks should be invoked.
-    """
+    """Test run_listeners when listeners are registered but no event data exists."""
     api_client = AsyncMock()
     store = EventStore(api_client)
 
