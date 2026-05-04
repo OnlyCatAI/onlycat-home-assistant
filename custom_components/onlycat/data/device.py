@@ -9,7 +9,7 @@ from datetime import UTC, datetime, tzinfo
 from typing import TYPE_CHECKING
 
 from .event import EventTriggerSource
-from .pet import PolicyResult
+from .policy import PolicyResult
 from .type import Type
 
 if TYPE_CHECKING:
@@ -41,6 +41,29 @@ class DeviceConnectivity:
             disconnect_reason=api_connectivity.get("disconnectReason"),
             timestamp=datetime.fromtimestamp(
                 api_connectivity.get("timestamp") / 1000.0, tz=UTC
+            ),
+        )
+
+
+@dataclass
+class DeviceUpdate:
+    """Data representing an update to a device."""
+
+    device_id: str
+    type: Type
+    body: Device
+
+    @classmethod
+    def from_api_response(cls, api_event: dict) -> DeviceUpdate | None:
+        """Create a DeviceUpdate instance from API response data."""
+        if api_event is None:
+            return None
+        return cls(
+            device_id=api_event["deviceId"],
+            type=Type(api_event["type"]) if api_event.get("type") else Type.UNKNOWN,
+            body=Device.from_api_response(
+                api_event.get("body"),
+                device_id=api_event["deviceId"],
             ),
         )
 
@@ -170,26 +193,3 @@ class Device:
     def add_policy_update_listener(self, listener: callable) -> None:
         """Add a listener to be called when the device transit policy is updated."""
         self._policy_update_listeners.append(listener)
-
-
-@dataclass
-class DeviceUpdate:
-    """Data representing an update to a device."""
-
-    device_id: str
-    type: Type
-    body: Device
-
-    @classmethod
-    def from_api_response(cls, api_event: dict) -> DeviceUpdate | None:
-        """Create a DeviceUpdate instance from API response data."""
-        if api_event is None:
-            return None
-        return cls(
-            device_id=api_event["deviceId"],
-            type=Type(api_event["type"]) if api_event.get("type") else Type.UNKNOWN,
-            body=Device.from_api_response(
-                api_event.get("body"),
-                device_id=api_event["deviceId"],
-            ),
-        )

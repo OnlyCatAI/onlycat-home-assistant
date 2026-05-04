@@ -121,7 +121,7 @@ class Event:
         if updated_event is None:
             return
         for field in fields(self):
-            new_value = getattr(updated_event, field.name, []) or []
+            new_value = getattr(updated_event, field.name)
             if new_value is not None:
                 if field.name == "rfid_codes":
                     old_value = getattr(self, field.name) or []

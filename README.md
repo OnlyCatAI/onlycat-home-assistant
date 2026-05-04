@@ -5,6 +5,7 @@ HomeAssistant integration for [OnlyCat](https://www.onlycat.com/) flaps.
 ## Features
 
 * 🏠 Know whether your pet is home or on the hunt using the Device Tracker
+  * 🕒 Know when your pet was last seen by the device, whether it transited or not
   * 🐾 In case your pet chooses another exit, you can override the presence using the `set_pet_location` service
 * 🔎 Keep track of your device and build automations with it using binary sensors for:
    * 📶 Flap connection status
@@ -51,9 +52,7 @@ Common automation ideas enabled by this integration include:
 
 Currently, the following features of the OnlyCat app are not yet included in the Home Assistant integration:
 
-* Creating or modifying door policies
 * Creating or modifying pet profiles (i.e., labels for RFID codes)
-* Accessing the video or poster frame of flap events
 
 ## Contributing
 
