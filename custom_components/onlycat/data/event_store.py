@@ -1,6 +1,5 @@
 """Manage global store of events per device."""
 
-import datetime
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -123,7 +122,8 @@ class EventStore:
             if subevent.rfid_code:
                 pet = self.get_pet_by_rfid(subevent.rfid_code)
                 pet.last_seen_summary = summary
-                if pet.last_seen_event and pet.last_seen_event.event_id == summary.event_id:
+                if pet.last_seen_event and \
+                   pet.last_seen_event.event_id == summary.event_id:
                     pet.last_seen = pet.last_seen_event.timestamp
                 pet.update_from_subevent(subevent)
                 await self.run_pet_listeners(pet.rfid_code)
