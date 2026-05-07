@@ -118,15 +118,20 @@ class EventStore:
             self._current_summaries[summary.device_id] = summary
         else:
             self._current_summaries[summary.device_id].update_from(summary)
+        changed_pets = set()
         for subevent in summary.subevents:
             if subevent.rfid_code:
                 pet = self.get_pet_by_rfid(subevent.rfid_code)
                 pet.last_seen_summary = summary
-                if pet.last_seen_event and \
-                   pet.last_seen_event.event_id == summary.event_id:
+                if (
+                    pet.last_seen_event
+                    and pet.last_seen_event.event_id == summary.event_id
+                ):
                     pet.last_seen = pet.last_seen_event.timestamp
                 pet.update_from_subevent(subevent)
-                await self.run_pet_listeners(pet.rfid_code)
+                changed_pets.add(pet.rfid_code)
+        for rfid_code in changed_pets:
+            await self.run_pet_listeners(rfid_code)
         await self.run_summary_listeners(summary.device_id)
 
     async def on_event_summary_update(self, data: dict) -> None:
