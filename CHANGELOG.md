@@ -1,5 +1,9 @@
 # Changelog
 
+## Update lint to python 3.14
+- Update lint to python 3.14
+
+---
 
 ## Fix Release workflow
 - Fixes release workflow
