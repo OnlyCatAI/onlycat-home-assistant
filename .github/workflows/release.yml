@@ -70,6 +70,14 @@ jobs:
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Delete draft releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | while read -r tag; do
+            gh release delete "$tag" --yes --cleanup-tag
+          done
+
       - name: Commit and push
         env:
           NEW_VERSION: ${{ steps.version.outputs.new_version }}
