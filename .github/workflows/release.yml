@@ -11,10 +11,6 @@ on:
           - patch
           - minor
           - major
-      changelog:
-        description: "Release notes (Markdown)"
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -61,34 +57,18 @@ jobs:
             '.version = $v' custom_components/onlycat/manifest.json > manifest_tmp.json
           mv manifest_tmp.json custom_components/onlycat/manifest.json
 
-      - name: Update CHANGELOG.md
-        env:
-          NEW_VERSION: ${{ steps.version.outputs.new_version }}
-          CHANGELOG_INPUT: ${{ inputs.changelog }}
+      - name: Extract changelog entry
+        id: changelog
         run: |
-          new_version="${NEW_VERSION}"
-          changelog="${CHANGELOG_INPUT}"
-
-          entry="## v${new_version}"$'\n\n'"${changelog}"
-
-          if [ -f CHANGELOG.md ]; then
-            # Read existing content, skip the "# Changelog" heading if present
-            existing=$(tail -n +2 CHANGELOG.md)
-            {
-              echo "# Changelog"
-              echo ""
-              echo "$entry"
-              echo ""
-              echo "---"
-              echo "$existing"
-            } > CHANGELOG.md
-          else
-            {
-              echo "# Changelog"
-              echo ""
-              echo "$entry"
-            } > CHANGELOG.md
-          fi
+          # Extract the topmost entry (between "# Changelog" and first "---")
+          notes=$(awk '/^# Changelog/{found=1; next} /^---$/{exit} found{print}' CHANGELOG.md)
+          # Trim leading/trailing blank lines
+          notes=$(echo "$notes" | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba}')
+          {
+            echo "notes<<CHANGELOG_EOF"
+            echo "$notes"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Commit and push
         env:
@@ -96,7 +76,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add custom_components/onlycat/manifest.json CHANGELOG.md
+          git add custom_components/onlycat/manifest.json
           git commit -m "Release v${NEW_VERSION}"
           git push
 
@@ -104,8 +84,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.version.outputs.new_version }}
-          CHANGELOG_INPUT: ${{ inputs.changelog }}
+          RELEASE_NOTES: ${{ steps.changelog.outputs.notes }}
         run: |
           gh release create "v${NEW_VERSION}" \
             --title "v${NEW_VERSION}" \
-            --notes "${CHANGELOG_INPUT}"
+            --notes "${RELEASE_NOTES}"
