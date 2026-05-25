@@ -75,7 +75,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | while read -r tag; do
-            gh release delete "$tag" --yes --cleanup-tag
+            echo "Deleting draft release: $tag"
+            gh release delete "$tag" --yes --cleanup-tag || true
           done
 
       - name: Commit and push
