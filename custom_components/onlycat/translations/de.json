@@ -10,9 +10,9 @@
             "reconfigure": {
                 "description": "OnlyCat Integration neu konfigurieren - Einstellungen aktualisieren.",
                 "data": {
-                    "ignore_flap_motion_rules": "Ignoriere Regln basierend auf Klappenbewegungen",
+                    "ignore_flap_motion_rules": "Ignoriere Regeln basierend auf Klappenbewegungen",
                     "ignore_motion_sensor_rules": "Ignoriere Regeln basierend auf Bewegungssensoren",
-                    "enable_detailed_metrics": "Erweiterte Metriken einschalten (~50 weitere Sensoren)",
+                    "enable_detailed_metrics": "Erweiterte Metriken einschalten (~50 weitere Attribute auf dem Fehler-Sensor)",
                     "poll_interval_hours": "Aktuallisierungsintervall in Stunden für Fehler- und Metriksensoren"
                 }
             }
