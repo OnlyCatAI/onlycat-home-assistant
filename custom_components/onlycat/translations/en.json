@@ -4,7 +4,11 @@
             "user": {
                 "description": "API Credentials for OnlyCat. Acquire them from the OnlyCat app.",
                 "data": {
-                    "token": "OnlyCat Device Token"
+                    "token": "OnlyCat Device Token",
+                    "ignore_flap_motion_rules": "Ignore rules based on flap motion",
+                    "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
+                    "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more attributes to error-sensor)",
+                    "poll_interval_hours": "Polling interval in hours for error and metroc sensors"
                 }
             },
             "reconfigure": {
@@ -12,7 +16,7 @@
                 "data": {
                     "ignore_flap_motion_rules": "Ignore rules based on flap motion",
                     "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
-                    "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more sensors)",
+                    "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more attributes to error-sensor)",
                     "poll_interval_hours": "Polling interval in hours for error and metroc sensors"
                 }
             }
