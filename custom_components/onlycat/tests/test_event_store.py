@@ -37,7 +37,7 @@ async def test_run_listeners_no_current_event() -> None:
     assert store._current_events == {}  # noqa: SLF001
     assert store._current_images == {}  # noqa: SLF001
 
-    await store.run_listeners(device_id)
+    await store.run_event_listeners(device_id)
 
     # No callback should have been called since there is no event for this device
     listener_lock.assert_not_called()
@@ -92,7 +92,7 @@ async def test_run_listeners_never_calls_with_none() -> None:
     # Scenario 1: _current_events entry is explicitly None
     store._current_events[device_id] = None  # noqa: SLF001
 
-    await store.run_listeners(device_id)
+    await store.run_event_listeners(device_id)
 
     for listener in all_listeners:
         listener.assert_not_called()
@@ -101,7 +101,7 @@ async def test_run_listeners_never_calls_with_none() -> None:
     real_event = Event(device_id=device_id, event_id=42)
     store._current_events[device_id] = real_event  # noqa: SLF001
 
-    await store.run_listeners(device_id)
+    await store.run_event_listeners(device_id)
 
     for listener in all_listeners:
         listener.assert_called_once_with(real_event)

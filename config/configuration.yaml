@@ -2,6 +2,7 @@
 homeassistant:
   debug: true
 
+
 # https://www.home-assistant.io/integrations/logger/
 logger:
   default: info
@@ -12,4 +13,4 @@ logger:
 
 debugpy:
   start: true
-  wait: false
+  wait: true

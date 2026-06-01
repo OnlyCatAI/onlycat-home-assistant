@@ -107,7 +107,7 @@ class OnlyCatLastImage(ImageEntity):
 
     async def on_event_update(self, event: Event) -> None:
         """Handle event update."""
-        if (
+        if event is None or (
             self._current_event
             and self._current_event.event_id is not None
             and event.event_id is not None

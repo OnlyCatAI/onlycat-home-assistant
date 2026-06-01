@@ -117,6 +117,8 @@ class OnlyCatApiClient:
             )
             raise OnlyCatApiClientCommunicationError from exception
         _LOGGER.debug("Received reply for event %s: %s", event, reply)
+        if reply is None:
+            return None
         for callback in self._listeners[event]:
             try:
                 await callback(reply)

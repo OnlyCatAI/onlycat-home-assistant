@@ -67,6 +67,8 @@ class OnlyCatLockSensor(BinarySensorEntity):
 
     async def on_event_update(self, event: Event) -> None:
         """Handle event update event."""
+        if event is None:
+            return
         if event.frame_count:
             self._attr_is_on = self.device.is_unlocked_in_idle_state()
         else:
