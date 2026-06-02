@@ -126,9 +126,35 @@ class OnlyCatLastVideo(Camera):
         if not self._current_event or not self._current_event.access_token:
             return None
         event = self._current_event
-        return (
+        url = (
             f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
         )
+
+        # To avoid 5XX logs in HA, we briefly check if the URL is reachable
+        # and not returning a server error.
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.head(url, timeout=2) as resp:
+                if resp.status >= 500:
+                    _LOGGER.debug(
+                        "OnlyCat video stream for event %s not ready or server error (status %s)",
+                        event.event_id,
+                        resp.status,
+                    )
+                    return None
+                if resp.status == HTTPStatus.NOT_FOUND:
+                    _LOGGER.debug(
+                        "OnlyCat video stream for event %s not found (404)",
+                        event.event_id,
+                    )
+                    return None
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.debug("Error checking OnlyCat video availability: %s", err)
+            # In case of timeout or other network errors, we might want to skip for now
+            # to avoid HA's stream worker from logging its own errors.
+            return None
+
+        return url
 
     async def on_event_update(self, event: Event) -> None:
         """Handle event update."""
