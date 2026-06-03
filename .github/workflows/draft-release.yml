@@ -22,17 +22,19 @@ jobs:
           current=$(jq -r '.version' custom_components/onlycat/manifest.json)
           IFS='.' read -r major minor patch <<< "$current"
           next_patch=$((patch + 1))
-          draft_version="${major}.${minor}.${next_patch}_draft-${{ github.event.pull_request.number }}"
+          draft_version="${major}.${minor}.${next_patch}_draft-$(date +%Y%m%d%H%M%S)"
+          draft_title=$(echo ${{ github.event.head_commit.message }} | head -1)
           echo "draft_version=$draft_version" >> "$GITHUB_OUTPUT"
+          echo "draft_title=$draft_title" >> "$GITHUB_OUTPUT"
 
       - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BODY: ${{ github.event.head_commit.message }}
           DRAFT_VERSION: ${{ steps.version.outputs.draft_version }}
+          PR_TITLE: ${{ steps.version.outputs.draft_title }}
         run: |
           gh release create "v${DRAFT_VERSION}" \
-            --draft \
+            --prerelease \
             --title "${PR_TITLE}" \
             --notes "${PR_BODY}"
