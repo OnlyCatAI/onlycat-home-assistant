@@ -23,7 +23,6 @@ jobs:
           IFS='.' read -r major minor patch <<< "$current"
           next_patch=$((patch + 1))
           draft_version="${major}.${minor}.${next_patch}_draft-$(date +%Y%m%d%H%M%S)"
-          draft_title=$(echo ${{ github.event.head_commit.message }} | head -1)
           echo "draft_version=$draft_version" >> "$GITHUB_OUTPUT"
           echo "draft_title=$draft_title" >> "$GITHUB_OUTPUT"
 
@@ -32,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_BODY: ${{ github.event.head_commit.message }}
           DRAFT_VERSION: ${{ steps.version.outputs.draft_version }}
-          PR_TITLE: ${{ steps.version.outputs.draft_title }}
+          PR_TITLE: ${{ steps.version.outputs.draft_version }}
         run: |
           gh release create "v${DRAFT_VERSION}" \
             --prerelease \
