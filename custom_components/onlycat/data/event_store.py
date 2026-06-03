@@ -154,10 +154,10 @@ class EventStore:
         """Call all event summary listeners for a given device."""
         if device_id not in self._event_summary_update_listeners:
             return
-        event = self._current_events.get(device_id, None)
-        if event is not None and event.summary is not None and event.summary:
+        summary = self._current_summaries.get(device_id, None)
+        if summary is not None:
             for callback in self._event_summary_update_listeners[device_id]:
-                await callback(event.summary)
+                await callback(summary)
 
     async def run_pet_listeners(self, rfid_code: str) -> None:
         """Call all pet listeners for a given RFID code."""

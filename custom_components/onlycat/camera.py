@@ -7,6 +7,7 @@ import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+import aiohttp
 from homeassistant.components.camera import (
     Camera,
     CameraEntityDescription,
@@ -126,9 +127,33 @@ class OnlyCatLastVideo(Camera):
         if not self._current_event or not self._current_event.access_token:
             return None
         event = self._current_event
-        return (
+        url = (
             f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
         )
+
+        session = async_get_clientsession(self.hass)
+
+        try:
+            async with session.head(url, timeout=2) as resp:
+                if resp.status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                    _LOGGER.debug(
+                        "OnlyCat video stream for event %s not ready or server error "
+                        "(status %s)",
+                        event.event_id,
+                        resp.status,
+                    )
+                    return None
+                if resp.status == HTTPStatus.NOT_FOUND:
+                    _LOGGER.debug(
+                        "OnlyCat video stream for event %s not found (404)",
+                        event.event_id,
+                    )
+                    return None
+        except (aiohttp.ClientError, TimeoutError) as err:
+            _LOGGER.debug("Error checking OnlyCat video availability: %s", err)
+            return None
+
+        return url
 
     async def on_event_update(self, event: Event) -> None:
         """Handle event update."""
