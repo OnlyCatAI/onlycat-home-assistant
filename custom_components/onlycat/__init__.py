@@ -191,8 +191,7 @@ async def async_reload_entry(
     entry: OnlyCatConfigEntry,
 ) -> None:
     """Reload config entry."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_migrate_entry(
