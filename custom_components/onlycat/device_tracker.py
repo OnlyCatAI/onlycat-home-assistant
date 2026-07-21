@@ -68,7 +68,7 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         }
         self._attr_unique_id = pet.rfid_code + "_tracker"
         self.entity_id = "device_tracker." + self._attr_unique_id
-        self._attr_location_name = STATE_NOT_HOME
+        self._attr_in_zones = ["zone.home"] if pet.location == STATE_HOME else []
         self._attr_last_seen = pet.last_seen
         self._event_store.add_pet_listener(pet.rfid_code, self.on_pet_update)
 
@@ -101,7 +101,7 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
             return
         self.pet.location = last_state.state
         self.pet.last_seen = restored_last_seen
-        self._attr_location_name = last_state.state
+        self._attr_in_zones = ["zone.home"] if last_state.state == STATE_HOME else []
         self._attr_last_seen = restored_last_seen
         self.async_write_ha_state()
 
@@ -110,7 +110,7 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         if pet.rfid_code != self.pet.rfid_code:
             return
         self.pet = pet
-        self._attr_location_name = pet.location
+        self._attr_in_zones = ["zone.home"] if pet.location == STATE_HOME else []
         self._attr_last_seen = pet.last_seen
         self.async_write_ha_state()
 
@@ -122,5 +122,5 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         self.pet.location = location
         self.pet.last_seen = datetime.now(UTC)
         self._attr_last_seen = self.pet.last_seen
-        self._attr_location_name = location
+        self._attr_in_zones = ["zone.home"] if location == STATE_HOME else []
         self.async_write_ha_state()
