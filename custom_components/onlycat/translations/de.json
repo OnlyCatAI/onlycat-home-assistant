@@ -2,9 +2,9 @@
     "config": {
         "step": {
             "user": {
-                "description": "Token für die OnlyCat API. In der OnlyCat App zu finden.",
+                "description": "Erstelle einen API-Schlüssel in der OnlyCat App unter Konto > API-Schlüssel.",
                 "data": {
-                    "token": "OnlyCat Device Token"
+                    "token": "OnlyCat API-Schlüssel"
                 }
             },
             "reconfigure": {

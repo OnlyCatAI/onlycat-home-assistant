@@ -2,9 +2,9 @@
     "config": {
         "step": {
             "user": {
-                "description": "API Credentials for OnlyCat. Acquire them from the OnlyCat app.",
+                "description": "Create an API key in the OnlyCat app under Account > API Keys.",
                 "data": {
-                    "token": "OnlyCat Device Token",
+                    "token": "OnlyCat API Key",
                     "ignore_flap_motion_rules": "Ignore rules based on flap motion",
                     "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
                     "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more attributes to error-sensor)",

@@ -46,7 +46,7 @@ Common automation ideas enabled by this integration include:
 1. Go to `Settings` > `Devices & Services` > `Add Integration`
 2. Search for "OnlyCat"
 3. Enter your configuration:
-   * **Device Token**: The token for your OnlyCat account. You can find it in the OnlyCat app under "Account".
+   * **API Key**: Enable Developer Mode in the OnlyCat app under Account, open API Keys, and create a key for Home Assistant.
 
 ## Limitations
 
@@ -66,4 +66,3 @@ To get a local development environment up and running, follow these steps:
    1. Directly by running `./scripts/develop`, or
    2. In Docker by running `docker run --volume ./config:/config --volume ./custom_components:/config/custom_components -p 8123:8123 "ghcr.io/home-assistant/home-assistant:stable"`
 3. Add the integration from the HA "Devices & services" ui.
-
