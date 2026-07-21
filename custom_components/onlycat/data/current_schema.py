@@ -15,6 +15,7 @@ DEVICE_POLICY_SCHEMA = {
             "description": "Unique identifier for the device, given by OnlyCat.",
         },
         "name": {"type": "string", "description": "Name of the transit policy."},
+        "activatedAt": {"type": "integer", "description": "Timestamp when the policy was activated."},
         # End of manually added entries
         "transitPolicy": {
             "type": "object",
