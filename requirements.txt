@@ -2,7 +2,7 @@ colorlog==6.11.0
 homeassistant==2026.5.3
 pip>=26.1.2
 ruff==0.15.22
-pytest==9.1.0
+pytest==9.1.1
 pytest-asyncio==1.4.0
 python-socketio==5.16.3
 pycares==5.0.1
