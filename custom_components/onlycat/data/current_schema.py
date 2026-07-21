@@ -45,6 +45,7 @@ DEVICE_POLICY_SCHEMA = {
                                         "deny",
                                         "fanfare",
                                         "success",
+                                        ""
                                     ],
                                 }
                             },
