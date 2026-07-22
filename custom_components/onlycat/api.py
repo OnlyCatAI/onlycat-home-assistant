@@ -101,7 +101,13 @@ class OnlyCatApiClient:
                     "Error while handling event %s with args %s", event, args
                 )
 
-    async def send_message(self, event: str, data: any) -> Any | None:
+    async def send_message(
+        self,
+        event: str,
+        data: any,
+        *,
+        notify_listeners: bool = True,
+    ) -> Any | None:
         """Send a message to the API."""
         _LOGGER.debug(
             "Sending message to API - Event: %s, Data: %s, Data Type: %s",
@@ -119,16 +125,17 @@ class OnlyCatApiClient:
         _LOGGER.debug("Received reply for event %s: %s", event, reply)
         if reply is None:
             return None
-        for callback in self._listeners[event]:
-            try:
-                await callback(reply)
-            except Exception:
-                _LOGGER.exception(
-                    "Error while handling reply for event %s with data %s: %s",
-                    event,
-                    data,
-                    reply,
-                )
+        if notify_listeners:
+            for callback in self._listeners[event]:
+                try:
+                    await callback(reply)
+                except Exception:
+                    _LOGGER.exception(
+                        "Error while handling reply for event %s with data %s: %s",
+                        event,
+                        data,
+                        reply,
+                    )
         return reply
 
     async def wait(self) -> None:

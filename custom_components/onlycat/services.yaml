@@ -27,3 +27,31 @@ toggle_pet_location:
       selector:
         entity:
           domain: device_tracker
+
+backfill_event_summaries:
+  name: Backfill event summaries
+  description: >-
+    Replays the recent event history still available from the OnlyCat gateway so
+    Home Assistant Recorder can retain exact RFID, direction, and action details.
+    This is a manual, throttled one-shot operation and does not add polling.
+  fields:
+    days:
+      name: Days
+      description: Ignore gateway events older than this many days.
+      default: 7
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 31
+          mode: box
+    maximum_events:
+      name: Maximum events
+      description: Maximum number of recent events to replay per cat flap.
+      default: 100
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 500
+          mode: box

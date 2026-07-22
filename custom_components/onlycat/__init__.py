@@ -97,9 +97,17 @@ async def async_setup_entry(
                     reverse=True,
                 )
             if events and "eventId" in events[0]:
+                latest_event = events[0]
                 await entry.runtime_data.event_store.send_get_event_message(
-                    device.device_id, events[0]["eventId"], subscribe=False
+                    device.device_id, latest_event["eventId"], subscribe=False
                 )
+                if latest_event.get("accessToken"):
+                    await entry.runtime_data.event_store.send_get_event_summary(
+                        device.device_id,
+                        latest_event["eventId"],
+                        latest_event["accessToken"],
+                        subscribe=False,
+                    )
 
     await refresh_subscriptions(None)
     entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)

@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.onlycat.data.event import Event
 from custom_components.onlycat.data.event_store import EventStore
+from custom_components.onlycat.data.event_summary import EventSummary
 
 
 @pytest.mark.asyncio
@@ -108,3 +109,26 @@ async def test_run_listeners_never_calls_with_none() -> None:
         # Verify the argument was never None in any call
         for c in listener.call_args_list:
             assert c != call(None), "Listener must never be called with None"
+
+
+@pytest.mark.asyncio
+async def test_history_replay_restores_current_event() -> None:
+    """Historical replay uses isolated listeners and restores the live event."""
+    store = EventStore(AsyncMock())
+    device_id = "OC-00000000001"
+    historical_event = Event(device_id=device_id, event_id=41)
+    historical_summary = EventSummary(device_id=device_id, event_id=41)
+    current_event = Event(device_id=device_id, event_id=42)
+    current_summary = EventSummary(device_id=device_id, event_id=42)
+    listener = AsyncMock()
+    store.add_history_replay_listener(device_id, listener)
+    store._current_events[device_id] = current_event  # noqa: SLF001
+    store._current_summaries[device_id] = current_summary  # noqa: SLF001
+
+    await store.run_history_replay_listeners(historical_event, historical_summary)
+    await store.restore_history_replay_listeners(device_id)
+
+    assert listener.await_args_list == [
+        call(historical_event, historical_summary, True),
+        call(current_event, current_summary, False),
+    ]

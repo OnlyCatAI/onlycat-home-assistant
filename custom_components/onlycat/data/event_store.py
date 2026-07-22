@@ -22,6 +22,7 @@ class EventStore:
         """Initialize EventStore with given api client."""
         self._event_update_listeners: dict[str, list[Callable]] = {}
         self._event_summary_update_listeners: dict[str, list[Callable]] = {}
+        self._history_replay_listeners: dict[str, list[Callable]] = {}
         self._pet_update_listeners: dict[str, list[Callable]] = {}
         self._current_events: dict[str, Event] = {}
         self._current_summaries: dict[str, EventSummary] = {}
@@ -159,6 +160,28 @@ class EventStore:
             for callback in self._event_summary_update_listeners[device_id]:
                 await callback(summary)
 
+    async def run_history_replay_listeners(
+        self,
+        event: Event,
+        summary: EventSummary | None,
+    ) -> None:
+        """Publish a historical event without changing live device or pet state."""
+        if event.device_id not in self._history_replay_listeners:
+            return
+        for callback in self._history_replay_listeners[event.device_id]:
+            await callback(event, summary, True)
+
+    async def restore_history_replay_listeners(self, device_id: str) -> None:
+        """Restore replay listeners to the current live event after a replay."""
+        event = self._current_events.get(device_id)
+        if event is None or device_id not in self._history_replay_listeners:
+            return
+        summary = self._current_summaries.get(device_id)
+        if summary is not None and summary.event_id != event.event_id:
+            summary = None
+        for callback in self._history_replay_listeners[device_id]:
+            await callback(event, summary, False)
+
     async def run_pet_listeners(self, rfid_code: str) -> None:
         """Call all pet listeners for a given RFID code."""
         if rfid_code not in self._pet_update_listeners:
@@ -179,6 +202,20 @@ class EventStore:
         if device_id not in self._event_summary_update_listeners:
             self._event_summary_update_listeners[device_id] = []
         self._event_summary_update_listeners[device_id].append(callback)
+
+    def add_history_replay_listener(self, device_id: str, callback: Callable) -> None:
+        """Add a listener used only to record historical events."""
+        if device_id not in self._history_replay_listeners:
+            self._history_replay_listeners[device_id] = []
+        self._history_replay_listeners[device_id].append(callback)
+
+    def get_current_summary(self, device_id: str) -> EventSummary | None:
+        """Return the current summary for a device, if available."""
+        return self._current_summaries.get(device_id)
+
+    def get_current_event(self, device_id: str) -> Event | None:
+        """Return the current event for a device, if available."""
+        return self._current_events.get(device_id)
 
     def add_pet_listener(self, rfid_code: str, callback: Callable) -> None:
         """Add function to a pets listener list."""
