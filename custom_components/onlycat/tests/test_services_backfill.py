@@ -14,7 +14,7 @@ def make_event(
     event_id: int,
     global_id: int,
     *,
-    access_token: str | None = "ephemeral-token",
+    access_token: str | None = "ephemeral-token",  # noqa: S107
 ) -> dict:
     """Build a gateway event response."""
     return {
@@ -77,13 +77,12 @@ async def test_bounded_backfill_uses_only_the_latest_gateway_page(
             return [event]
         if topic == "getEventSummary":
             return make_summary(device_id, data["eventId"])
-        raise AssertionError(f"Unexpected topic: {topic}")
+        message = f"Unexpected topic: {topic}"
+        raise AssertionError(message)
 
     client = SimpleNamespace(send_message=AsyncMock(side_effect=send_message))
     entry, replay_listener = make_entry(device_id, client)
-    call = SimpleNamespace(
-        data={"all_history": False, "days": 31, "maximum_events": 1}
-    )
+    call = SimpleNamespace(data={"all_history": False, "days": 31, "maximum_events": 1})
     monkeypatch.setattr("custom_components.onlycat.services.BACKFILL_DELAY_SECONDS", 0)
 
     result = await async_handle_backfill_event_summaries(call, entry)
@@ -100,8 +99,9 @@ async def test_bounded_backfill_uses_only_the_latest_gateway_page(
     }
     replay_listener.assert_awaited_once()
     replay_event, replay_summary, historical = replay_listener.await_args.args
-    assert replay_event.event_id == 1179
-    assert replay_summary.event_id == 1179
+    expected_event_id = 1179
+    assert replay_event.event_id == expected_event_id
+    assert replay_summary.event_id == expected_event_id
     assert historical is True
 
 
@@ -123,14 +123,18 @@ async def test_full_backfill_pages_backwards_and_deduplicates_events(
             before = data.get("beforeGlobalId")
             if before is None:
                 return [newest, overlap]
-            if before == 202:
+            overlap_global_id = 202
+            oldest_global_id = 201
+            if before == overlap_global_id:
                 return [overlap, oldest]
-            if before == 201:
+            if before == oldest_global_id:
                 return []
-            raise AssertionError(f"Unexpected cursor: {before}")
+            message = f"Unexpected cursor: {before}"
+            raise AssertionError(message)
         if topic == "getEventSummary":
             return make_summary(device_id, data["eventId"])
-        raise AssertionError(f"Unexpected topic: {topic}")
+        message = f"Unexpected topic: {topic}"
+        raise AssertionError(message)
 
     client = SimpleNamespace(send_message=AsyncMock(side_effect=send_message))
     entry, replay_listener = make_entry(device_id, client)
@@ -166,8 +170,7 @@ async def test_full_backfill_pages_backwards_and_deduplicates_events(
         "failed": 0,
     }
     assert [
-        invocation.args[0].event_id
-        for invocation in replay_listener.await_args_list
+        invocation.args[0].event_id for invocation in replay_listener.await_args_list
     ] == [101, 102, 103]
 
 
@@ -183,13 +186,12 @@ async def test_backfill_preserves_base_event_without_a_summary(
         assert kwargs == {"notify_listeners": False}
         if topic == "getDeviceEvents":
             return [event]
-        raise AssertionError(f"Unexpected topic: {topic}")
+        message = f"Unexpected topic: {topic}"
+        raise AssertionError(message)
 
     client = SimpleNamespace(send_message=AsyncMock(side_effect=send_message))
     entry, replay_listener = make_entry(device_id, client)
-    call = SimpleNamespace(
-        data={"all_history": False, "days": 31, "maximum_events": 1}
-    )
+    call = SimpleNamespace(data={"all_history": False, "days": 31, "maximum_events": 1})
     monkeypatch.setattr("custom_components.onlycat.services.BACKFILL_DELAY_SECONDS", 0)
 
     result = await async_handle_backfill_event_summaries(call, entry)
@@ -198,6 +200,7 @@ async def test_backfill_preserves_base_event_without_a_summary(
     assert result["summaries"] == 0
     assert result["skipped"] == 1
     replay_event, replay_summary, historical = replay_listener.await_args.args
-    assert replay_event.event_id == 1179
+    expected_event_id = 1179
+    assert replay_event.event_id == expected_event_id
     assert replay_summary is None
     assert historical is True

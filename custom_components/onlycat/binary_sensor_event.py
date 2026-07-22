@@ -147,7 +147,7 @@ class OnlyCatEventSensor(BinarySensorEntity):
         self,
         event: Event,
         summary: EventSummary | None,
-        historical: bool,
+        historical: bool,  # noqa: FBT001
     ) -> None:
         """Record a historical event, then allow the live event to be restored."""
         self._write_event(event, summary, historical=historical)

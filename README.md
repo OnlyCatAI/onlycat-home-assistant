@@ -60,7 +60,12 @@ Home Assistant Recorder. By default it is bounded by its `days` and
 `maximum_events` fields. Enabling `all_history` follows OnlyCat's
 `beforeGlobalId` cursor until the gateway has no older page. The action is
 manual-only and throttled to at most one gateway request per second. It does not
-add a polling loop or alter current pet locations, door policy, or flap state.
+alter current pet locations, door policy, or flap state.
+
+Live event delivery is reconciled automatically. After reconnecting, and every
+15 minutes as a safeguard against silent WebSocket gaps, the integration checks
+the gateway's latest event page and replays only event IDs it has not already
+processed. Summary requests are made only for those unseen events.
 
 Full-history backfills can take a long time. They are safe to repeat: gateway
 pages are deduplicated by event ID and Home Assistant's restored live event is

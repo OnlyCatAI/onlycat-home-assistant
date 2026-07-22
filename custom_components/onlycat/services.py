@@ -186,9 +186,7 @@ async def _get_device_event_history(
             break
 
         global_ids = [
-            event.global_id
-            for event in page_events
-            if isinstance(event.global_id, int)
+            event.global_id for event in page_events if isinstance(event.global_id, int)
         ]
         if not global_ids:
             _LOGGER.warning(
@@ -202,8 +200,7 @@ async def _get_device_event_history(
             before_global_id is not None and next_cursor >= before_global_id
         ):
             _LOGGER.warning(
-                "OnlyCat history cursor did not move backwards for %s; "
-                "stopping at %s",
+                "OnlyCat history cursor did not move backwards for %s; stopping at %s",
                 device_id,
                 next_cursor,
             )
@@ -276,9 +273,7 @@ async def async_handle_backfill_event_summaries(
             listed += device_listed
             unique_events += len(events)
             events = [
-                event
-                for event in events
-                if cutoff is None or event.timestamp >= cutoff
+                event for event in events if cutoff is None or event.timestamp >= cutoff
             ]
             events.sort(key=lambda event: event.timestamp)
             if not all_history:
@@ -292,7 +287,7 @@ async def async_handle_backfill_event_summaries(
                         summary = await _get_historical_event_summary(
                             entry, device.device_id, event
                         )
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         failed += 1
                         _LOGGER.exception(
                             "Could not fetch the summary for OnlyCat event %s; "

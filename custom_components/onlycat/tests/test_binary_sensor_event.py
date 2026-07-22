@@ -30,7 +30,7 @@ async def test_event_summary_adds_exact_subevent_attributes() -> None:
         frame_count=12,
         event_trigger_source=EventTriggerSource.OUTDOOR_MOTION,
         event_classification=EventClassification.CONTRABAND,
-        access_token="must-not-be-published",
+        access_token="must-not-be-published",  # noqa: S106
         rfid_codes=[],
     )
     subevent = SubEvent.from_api_response(
@@ -45,7 +45,7 @@ async def test_event_summary_adds_exact_subevent_attributes() -> None:
     assert subevent is not None
     summary = EventSummary(device_id=device_id, event_id=1179, subevents=[subevent])
 
-    await sensor.on_history_replay(event, summary, True)
+    await sensor.on_history_replay(event, summary, True)  # noqa: FBT003
 
     assert sensor.extra_state_attributes == {
         "eventId": 1179,

@@ -1,7 +1,10 @@
 """Manage global store of events per device."""
 
+import asyncio
 import logging
-from collections.abc import Callable
+from collections import defaultdict, deque
+from collections.abc import Callable, Iterable
+from datetime import UTC, datetime
 from typing import Any
 
 from homeassistant.const import STATE_UNKNOWN
@@ -13,6 +16,8 @@ from .event import Event, EventUpdate
 from .event_summary import EventSummary
 
 _LOGGER = logging.getLogger(__name__)
+MAX_SEEN_EVENT_IDS = 200
+RECOVERY_REQUEST_DELAY_SECONDS = 1.0
 
 
 class EventStore:
@@ -29,6 +34,81 @@ class EventStore:
         self._current_images: dict[str, bytes] = {}
         self._pets: dict[str, Pet] = {}
         self._api_client: OnlyCatApiClient = api_client
+        self._seen_event_ids: dict[str, deque[int]] = defaultdict(deque)
+        self._seen_event_id_sets: dict[str, set[int]] = defaultdict(set)
+
+    def mark_event_seen(self, device_id: str, event_id: int) -> None:
+        """Remember a successfully processed event using bounded memory."""
+        seen_ids = self._seen_event_id_sets[device_id]
+        if event_id in seen_ids:
+            return
+
+        ordered_ids = self._seen_event_ids[device_id]
+        if len(ordered_ids) >= MAX_SEEN_EVENT_IDS:
+            seen_ids.discard(ordered_ids.popleft())
+        ordered_ids.append(event_id)
+        seen_ids.add(event_id)
+
+    def mark_events_seen(self, events: Iterable[Event]) -> None:
+        """Establish an initial event-history baseline without replaying it."""
+        for event in events:
+            if event.device_id and event.event_id is not None:
+                self.mark_event_seen(event.device_id, event.event_id)
+
+    async def recover_unseen_events(
+        self, device_id: str, events: Iterable[Event]
+    ) -> int:
+        """Replay unseen gateway events in chronological order."""
+        unseen_events = sorted(
+            (
+                event
+                for event in events
+                if event.event_id is not None
+                and event.event_id not in self._seen_event_id_sets[device_id]
+            ),
+            key=lambda event: event.timestamp or datetime.min.replace(tzinfo=UTC),
+        )
+        recovered = 0
+
+        try:
+            for event in unseen_events:
+                summary = None
+                if event.access_token:
+                    raw_summary = await self._api_client.send_message(
+                        "getEventSummary",
+                        {
+                            "deviceId": device_id,
+                            "eventId": event.event_id,
+                            "accessToken": event.access_token,
+                            "subscribe": False,
+                        },
+                        notify_listeners=False,
+                    )
+                    summary = (
+                        EventSummary.from_api_response(raw_summary)
+                        if isinstance(raw_summary, dict)
+                        else None
+                    )
+                    await asyncio.sleep(RECOVERY_REQUEST_DELAY_SECONDS)
+
+                    if (
+                        summary is None
+                        or summary.device_id != device_id
+                        or summary.event_id != event.event_id
+                    ):
+                        _LOGGER.warning(
+                            "Could not reconcile OnlyCat event %s; will retry later",
+                            event.event_id,
+                        )
+                        continue
+
+                await self.run_history_replay_listeners(event, summary)
+                self.mark_event_seen(device_id, event.event_id)
+                recovered += 1
+        finally:
+            await self.restore_history_replay_listeners(device_id)
+
+        return recovered
 
     async def send_get_event_message(
         self,
@@ -89,6 +169,8 @@ class EventStore:
         event = Event.from_api_response(data) if isinstance(data, dict) else data
         if not event:
             return
+        if event.device_id and event.event_id is not None:
+            self.mark_event_seen(event.device_id, event.event_id)
         if event.device_id not in self._current_events:
             self._current_events[event.device_id] = event
         if self._current_events[event.device_id].event_id != event.event_id:
@@ -169,7 +251,7 @@ class EventStore:
         if event.device_id not in self._history_replay_listeners:
             return
         for callback in self._history_replay_listeners[event.device_id]:
-            await callback(event, summary, True)
+            await callback(event, summary, True)  # noqa: FBT003
 
     async def restore_history_replay_listeners(self, device_id: str) -> None:
         """Restore replay listeners to the current live event after a replay."""
@@ -180,7 +262,7 @@ class EventStore:
         if summary is not None and summary.event_id != event.event_id:
             summary = None
         for callback in self._history_replay_listeners[device_id]:
-            await callback(event, summary, False)
+            await callback(event, summary, False)  # noqa: FBT003
 
     async def run_pet_listeners(self, rfid_code: str) -> None:
         """Call all pet listeners for a given RFID code."""

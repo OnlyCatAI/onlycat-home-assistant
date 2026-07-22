@@ -7,17 +7,20 @@ https://github.com/OnlyCatAI/onlycat-home-assistant
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_interval
 
 from .api import OnlyCatApiClient, OnlyCatApiClientCommunicationError
 from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device
+from .data.event import Event
 from .data.event_store import EventStore
 from .data.event_summary import SubEvent
 from .services import async_setup_services
@@ -35,10 +38,11 @@ PLATFORMS: list[Platform] = [
     Platform.CAMERA,
 ]
 _LOGGER = logging.getLogger(__name__)
+EVENT_RECONCILIATION_INTERVAL = timedelta(minutes=15)
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
-async def async_setup_entry(
+async def async_setup_entry(  # noqa: PLR0915
     hass: HomeAssistant,
     entry: OnlyCatConfigEntry,
 ) -> bool:
@@ -76,40 +80,76 @@ async def async_setup_entry(
         "eventSummaryUpdate", entry.runtime_data.event_store.on_event_summary_update
     )
 
-    async def refresh_subscriptions(args: dict | None) -> None:
-        _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)
-        for device in entry.runtime_data.devices:
-            await entry.runtime_data.client.send_message(
-                "getDevice", {"deviceId": device.device_id, "subscribe": True}
-            )
-            events = await entry.runtime_data.client.send_message(
-                "getDeviceEvents", {"deviceId": device.device_id, "subscribe": True}
-            )
-            if events:
-                events.sort(
-                    key=lambda e: datetime.fromisoformat(
-                        e.get(
-                            "timestamp",
-                            None,
-                        )
-                        or datetime.min.replace(tzinfo=UTC).isoformat()
-                    ),
-                    reverse=True,
-                )
-            if events and "eventId" in events[0]:
-                latest_event = events[0]
-                await entry.runtime_data.event_store.send_get_event_message(
-                    device.device_id, latest_event["eventId"], subscribe=False
-                )
-                if latest_event.get("accessToken"):
-                    await entry.runtime_data.event_store.send_get_event_summary(
-                        device.device_id,
-                        latest_event["eventId"],
-                        latest_event["accessToken"],
-                        subscribe=False,
-                    )
+    event_recovery_lock = asyncio.Lock()
 
-    await refresh_subscriptions(None)
+    async def process_event_history(
+        device_id: str, raw_events: list[dict], *, recover_unseen: bool
+    ) -> int:
+        """Seed or reconcile the first retained gateway event page."""
+        events = [
+            event
+            for raw_event in raw_events
+            if (event := Event.from_api_response(raw_event)) is not None
+            and event.device_id == device_id
+            and event.event_id is not None
+            and event.timestamp is not None
+        ]
+        if recover_unseen:
+            recovered = await entry.runtime_data.event_store.recover_unseen_events(
+                device_id, events
+            )
+            if recovered:
+                _LOGGER.info(
+                    "Recovered %s unseen OnlyCat events for %s", recovered, device_id
+                )
+            return recovered
+
+        entry.runtime_data.event_store.mark_events_seen(events)
+        return 0
+
+    async def hydrate_latest_event(device_id: str, events: list[dict]) -> None:
+        """Restore the newest event and pet location as live state."""
+        events.sort(
+            key=lambda event: datetime.fromisoformat(
+                event.get("timestamp") or datetime.min.replace(tzinfo=UTC).isoformat()
+            ),
+            reverse=True,
+        )
+        if not events or "eventId" not in events[0]:
+            return
+
+        latest_event = events[0]
+        await entry.runtime_data.event_store.send_get_event_message(
+            device_id, latest_event["eventId"], subscribe=False
+        )
+        if latest_event.get("accessToken"):
+            await entry.runtime_data.event_store.send_get_event_summary(
+                device_id,
+                latest_event["eventId"],
+                latest_event["accessToken"],
+                subscribe=False,
+            )
+
+    async def refresh_subscriptions(
+        args: dict | None, *, recover_unseen: bool = True
+    ) -> None:
+        _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)
+        async with event_recovery_lock:
+            for device in entry.runtime_data.devices:
+                await entry.runtime_data.client.send_message(
+                    "getDevice", {"deviceId": device.device_id, "subscribe": True}
+                )
+                events = await entry.runtime_data.client.send_message(
+                    "getDeviceEvents",
+                    {"deviceId": device.device_id, "subscribe": True},
+                )
+                events = events if isinstance(events, list) else []
+                await process_event_history(
+                    device.device_id, events, recover_unseen=recover_unseen
+                )
+                await hydrate_latest_event(device.device_id, events)
+
+    await refresh_subscriptions(None, recover_unseen=False)
 
     async def mark_disconnected(*_args: object) -> None:
         """Make entity availability reflect a lost OnlyCat cloud connection."""
@@ -124,6 +164,31 @@ async def async_setup_entry(
         await refresh_subscriptions(None)
         await entry.runtime_data.coordinator.async_refresh()
 
+    async def reconcile_event_history(_now: datetime) -> None:
+        """Recover silently dropped push events from the latest gateway page."""
+        try:
+            async with event_recovery_lock:
+                for device in entry.runtime_data.devices:
+                    events = await entry.runtime_data.client.send_message(
+                        "getDeviceEvents",
+                        {"deviceId": device.device_id, "subscribe": False},
+                        notify_listeners=False,
+                    )
+                    event_list = events if isinstance(events, list) else []
+                    recovered = await process_event_history(
+                        device.device_id,
+                        event_list,
+                        recover_unseen=True,
+                    )
+                    if recovered:
+                        await hydrate_latest_event(device.device_id, event_list)
+        except OnlyCatApiClientCommunicationError:
+            _LOGGER.warning(
+                "OnlyCat event reconciliation deferred while the gateway is offline"
+            )
+        except Exception:
+            _LOGGER.exception("Unexpected error reconciling OnlyCat event history")
+
     entry.runtime_data.client.add_event_listener("connect", handle_reconnect)
     entry.runtime_data.client.add_event_listener("disconnect", mark_disconnected)
     entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
@@ -133,6 +198,11 @@ async def async_setup_entry(
         await entry.runtime_data.event_store.run_event_listeners(device.device_id)
     for pet in entry.runtime_data.event_store.get_pets():
         await entry.runtime_data.event_store.run_pet_listeners(pet.rfid_code)
+    entry.async_on_unload(
+        async_track_time_interval(
+            hass, reconcile_event_history, EVENT_RECONCILIATION_INTERVAL
+        )
+    )
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 

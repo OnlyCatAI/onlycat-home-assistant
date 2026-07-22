@@ -1,5 +1,6 @@
 """Tests for EventStore."""
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, call
 
 import pytest
@@ -7,6 +8,16 @@ import pytest
 from custom_components.onlycat.data.event import Event
 from custom_components.onlycat.data.event_store import EventStore
 from custom_components.onlycat.data.event_summary import EventSummary
+
+
+def recovery_event(device_id: str, event_id: int) -> Event:
+    """Build an event from a recent gateway history page."""
+    return Event(
+        device_id=device_id,
+        event_id=event_id,
+        timestamp=datetime(2026, 7, 21, 21, event_id % 60, tzinfo=UTC),
+        access_token=f"token-{event_id}",
+    )
 
 
 @pytest.mark.asyncio
@@ -129,6 +140,67 @@ async def test_history_replay_restores_current_event() -> None:
     await store.restore_history_replay_listeners(device_id)
 
     assert listener.await_args_list == [
-        call(historical_event, historical_summary, True),
-        call(current_event, current_summary, False),
+        call(historical_event, historical_summary, True),  # noqa: FBT003
+        call(current_event, current_summary, False),  # noqa: FBT003
     ]
+
+
+@pytest.mark.asyncio
+async def test_recovery_replays_every_unseen_event_not_only_the_latest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reconnect recovery fills IDs missed before a later live event arrived."""
+    device_id = "OC-00000000001"
+    api_client = AsyncMock()
+    api_client.send_message.side_effect = lambda _topic, data, **_kwargs: {
+        "deviceId": device_id,
+        "eventId": data["eventId"],
+        "subevents": [],
+    }
+    store = EventStore(api_client)
+    listener = AsyncMock()
+    store.add_history_replay_listener(device_id, listener)
+    monkeypatch.setattr(
+        "custom_components.onlycat.data.event_store.RECOVERY_REQUEST_DELAY_SECONDS", 0
+    )
+
+    events = [recovery_event(device_id, event_id) for event_id in range(1330, 1334)]
+    store.mark_events_seen([events[0], events[3]])
+
+    recovered = await store.recover_unseen_events(device_id, events)
+
+    expected_recovered = 2
+    assert recovered == expected_recovered
+    assert [item.args[0].event_id for item in listener.await_args_list] == [1331, 1332]
+    assert [
+        item.kwargs["notify_listeners"]
+        for item in api_client.send_message.await_args_list
+    ] == [False, False]
+
+    listener.reset_mock()
+    assert await store.recover_unseen_events(device_id, events) == 0
+    listener.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_recovery_retries_an_event_until_its_summary_is_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An incomplete gateway summary is not permanently treated as processed."""
+    device_id = "OC-00000000001"
+    event = recovery_event(device_id, 1331)
+    api_client = AsyncMock()
+    api_client.send_message.side_effect = [
+        None,
+        {"deviceId": device_id, "eventId": 1331, "subevents": []},
+    ]
+    store = EventStore(api_client)
+    listener = AsyncMock()
+    store.add_history_replay_listener(device_id, listener)
+    monkeypatch.setattr(
+        "custom_components.onlycat.data.event_store.RECOVERY_REQUEST_DELAY_SECONDS", 0
+    )
+
+    assert await store.recover_unseen_events(device_id, [event]) == 0
+    assert await store.recover_unseen_events(device_id, [event]) == 1
+    listener.assert_awaited_once()
