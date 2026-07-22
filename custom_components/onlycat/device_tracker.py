@@ -129,4 +129,10 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         self.pet.last_seen = datetime.now(UTC)
         self._attr_last_seen = self.pet.last_seen
         self._attr_in_zones = ["zone.home"] if location == STATE_HOME else []
+        _LOGGER.debug(
+            "Manually updated pet %s location to %s at %s",
+            self.pet.rfid_code,
+            location,
+            self.pet.last_seen,
+        )
         self.async_write_ha_state()
