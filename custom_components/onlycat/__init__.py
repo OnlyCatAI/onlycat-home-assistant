@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import OnlyCatApiClient
+from .api import OnlyCatApiClient, OnlyCatApiClientCommunicationError
 from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device
@@ -110,7 +110,22 @@ async def async_setup_entry(
                     )
 
     await refresh_subscriptions(None)
-    entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)
+
+    async def mark_disconnected(*_args: object) -> None:
+        """Make entity availability reflect a lost OnlyCat cloud connection."""
+        entry.runtime_data.coordinator.async_set_update_error(
+            OnlyCatApiClientCommunicationError(
+                "Disconnected from the OnlyCat cloud gateway"
+            )
+        )
+
+    async def handle_reconnect() -> None:
+        """Restore subscriptions and entity availability after reconnecting."""
+        await refresh_subscriptions(None)
+        await entry.runtime_data.coordinator.async_refresh()
+
+    entry.runtime_data.client.add_event_listener("connect", handle_reconnect)
+    entry.runtime_data.client.add_event_listener("disconnect", mark_disconnected)
     entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
     await async_setup_services(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
