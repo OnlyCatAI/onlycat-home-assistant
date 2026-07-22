@@ -99,6 +99,7 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
             restored_last_seen is None or restored_last_seen <= self.pet.last_seen
         ):
             return
+        # TODO: This is only updating the self.pet of this device_tracker. It has to restore the state to the event_store.
         self.pet.location = last_state.state
         self.pet.last_seen = restored_last_seen
         self._attr_in_zones = ["zone.home"] if last_state.state == STATE_HOME else []
