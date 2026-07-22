@@ -128,6 +128,11 @@ class EventStore:
                     and pet.last_seen_event.event_id == summary.event_id
                 ):
                     pet.last_seen = pet.last_seen_event.timestamp
+                    _LOGGER.debug(
+                        "Updated pet %s last seen time to %s based on event",
+                        pet.rfid_code,
+                        pet.last_seen,
+                    )
                 pet.update_from_subevent(subevent)
                 changed_pets.add(pet.rfid_code)
         for rfid_code in changed_pets:
