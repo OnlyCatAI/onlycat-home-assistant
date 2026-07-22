@@ -55,11 +55,16 @@ The flap event binary sensor records the summary subevents supplied by OnlyCat,
 including each RFID code, direction, and action. Access tokens are never exposed
 as entity attributes.
 
-The `onlycat.backfill_event_summaries` action can replay the recent history still
-available from the gateway into Home Assistant Recorder. It is manual-only,
-bounded by its `days` and `maximum_events` fields, and throttled to at most two
-summary requests per second. It does not add a polling loop or alter current pet
-locations, door policy, or flap state.
+The `onlycat.backfill_event_summaries` action can replay gateway history into
+Home Assistant Recorder. By default it is bounded by its `days` and
+`maximum_events` fields. Enabling `all_history` follows OnlyCat's
+`beforeGlobalId` cursor until the gateway has no older page. The action is
+manual-only and throttled to at most one gateway request per second. It does not
+add a polling loop or alter current pet locations, door policy, or flap state.
+
+Full-history backfills can take a long time. They are safe to repeat: gateway
+pages are deduplicated by event ID and Home Assistant's restored live event is
+kept separate from the historical replay path.
 
 ## Limitations
 
