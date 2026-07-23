@@ -101,9 +101,10 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
             return
         self.pet.location = last_state.state
         self.pet.last_seen = restored_last_seen
-        self._attr_in_zones = ["zone.home"] if last_state.state == STATE_HOME else []
-        self._attr_last_seen = restored_last_seen
-        self.async_write_ha_state()
+        self.pet.last_seen_event = None
+        self.pet.last_seen_summary = None
+        self._event_store.add_pet(self.pet)
+        await self._event_store.run_pet_listeners(self.pet.rfid_code)
 
     async def on_pet_update(self, pet: Pet) -> None:
         """Handle updates to the pet data."""
@@ -123,4 +124,10 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         self.pet.last_seen = datetime.now(UTC)
         self._attr_last_seen = self.pet.last_seen
         self._attr_in_zones = ["zone.home"] if location == STATE_HOME else []
+        _LOGGER.debug(
+            "Manually updated pet %s location to %s at %s",
+            self.pet.rfid_code,
+            location,
+            self.pet.last_seen,
+        )
         self.async_write_ha_state()

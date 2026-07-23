@@ -47,7 +47,8 @@ class Pet:
             else:
                 self.location = STATE_HOME
         _LOGGER.debug(
-            "Updated pet %s location to %s based on subevent",
+            "Updated pet %s location to %s based on subevent at %s",
             self.rfid_code,
             self.location,
+            self.last_seen,
         )
