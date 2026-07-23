@@ -102,9 +102,10 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         # TODO: This is only updating the self.pet of this device_tracker. It has to restore the state to the event_store.
         self.pet.location = last_state.state
         self.pet.last_seen = restored_last_seen
-        self._attr_in_zones = ["zone.home"] if last_state.state == STATE_HOME else []
-        self._attr_last_seen = restored_last_seen
-        self.async_write_ha_state()
+        self.pet.last_seen_event = None
+        self.pet.last_seen_summary = None
+        self._event_store.add_pet(self.pet)
+        await self._event_store.run_pet_listeners(self.pet.rfid_code)
 
     async def on_pet_update(self, pet: Pet) -> None:
         """Handle updates to the pet data."""
