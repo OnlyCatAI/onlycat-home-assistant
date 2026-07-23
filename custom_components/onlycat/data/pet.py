@@ -50,5 +50,5 @@ class Pet:
             "Updated pet %s location to %s based on subevent at %s",
             self.rfid_code,
             self.location,
-            self.last_seen
+            self.last_seen,
         )
