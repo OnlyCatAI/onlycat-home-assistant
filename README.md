@@ -9,7 +9,8 @@ HomeAssistant integration for [OnlyCat](https://www.onlycat.com/) flaps.
   * 🐾 In case your pet chooses another exit, you can override the presence using the `set_pet_location` service
 * 🔎 Keep track of your device and build automations with it using binary sensors for:
    * 📶 Flap connection status
-   * 🕒 Flap events (including timestamps, RFID codes, trigger source, and event classification)
+   * 🕒 Flap events (including timestamps, exact summary RFID attribution,
+     direction, action, trigger source, and event classification)
    * 🐭 Contraband detection
    * 🔐 Lock state
    * 👤 Human detection
@@ -47,6 +48,28 @@ Common automation ideas enabled by this integration include:
 2. Search for "OnlyCat"
 3. Enter your configuration:
    * **API Key**: Enable Developer Mode in the OnlyCat app under Account, open API Keys, and create a key for Home Assistant.
+
+## Historical event summaries
+
+The flap event binary sensor records the summary subevents supplied by OnlyCat,
+including each RFID code, direction, and action. Access tokens are never exposed
+as entity attributes.
+
+The `onlycat.backfill_event_summaries` action can replay gateway history into
+Home Assistant Recorder. By default it is bounded by its `days` and
+`maximum_events` fields. Enabling `all_history` follows OnlyCat's
+`beforeGlobalId` cursor until the gateway has no older page. The action is
+manual-only and throttled to at most one gateway request per second. It does not
+alter current pet locations, door policy, or flap state.
+
+Live event delivery is reconciled automatically. After reconnecting, and every
+15 minutes as a safeguard against silent WebSocket gaps, the integration checks
+the gateway's latest event page and replays only event IDs it has not already
+processed. Summary requests are made only for those unseen events.
+
+Full-history backfills can take a long time. They are safe to repeat: gateway
+pages are deduplicated by event ID and Home Assistant's restored live event is
+kept separate from the historical replay path.
 
 ## Limitations
 
