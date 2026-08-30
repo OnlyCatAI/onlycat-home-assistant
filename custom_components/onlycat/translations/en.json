@@ -4,7 +4,7 @@
             "user": {
                 "description": "Create an API key in the OnlyCat app under Account > API Keys.",
                 "data": {
-                    "token": "OnlyCat API Key",
+                    "api_key": "OnlyCat API Key",
                     "ignore_flap_motion_rules": "Ignore rules based on flap motion",
                     "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
                     "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more attributes to error-sensor)",
@@ -22,7 +22,7 @@
             }
         },
         "error": {
-            "auth": "Token wrong.",
+            "auth": "API key wrong.",
             "connection": "Unable to connect to the server.",
             "unknown": "Unknown error occurred."
         },

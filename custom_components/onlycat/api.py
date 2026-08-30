@@ -39,13 +39,13 @@ class OnlyCatApiClient:
 
     def __init__(
         self,
-        token: str,
+        api_key: str,
         session: aiohttp.ClientSession,
         data: OnlyCatData | None = None,
         socket: socketio.AsyncClient | None = None,
     ) -> None:
         """Sample API Client."""
-        self._token = token
+        self._api_key = api_key
         self._data = data
         self._session = session
         self._listeners = defaultdict(list)
@@ -72,7 +72,7 @@ class OnlyCatApiClient:
                 transports=["websocket"],
                 namespaces="/",
                 headers={"platform": "home-assistant", "device": "onlycat-hass"},
-                auth={"token": self._token},
+                auth={"token": self._api_key},
             )
         except Exception as exception:
             raise OnlyCatApiClientError from exception
@@ -89,6 +89,10 @@ class OnlyCatApiClient:
         _LOGGER.debug(
             "Added event listener for event %s: %s", event, callback.__module__
         )
+
+    def clear_event_listeners(self) -> None:
+        """Clear all event listeners."""
+        self._listeners.clear()
 
     async def handle_event(self, event: str, *args: Any) -> None:
         """Handle an event."""
