@@ -204,12 +204,8 @@ async def async_migrate_entry(
         config_entry.version,
         config_entry.minor_version,
     )
-    if config_entry.version == 1 and "settings" in config_entry.data:
-        return True
-    if config_entry.version == 2 and "api_key" in config_entry.data:  # noqa: PLR2004
-        return True
     new_data = {**config_entry.data}
-    if "settings" not in config_entry.data:
+    if config_entry.version == 1 and "settings" not in config_entry.data:
         default_settings = {
             "ignore_flap_motion_rules": False,
             "ignore_motion_sensor_rules": False,
