@@ -12,8 +12,6 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from custom_components.onlycat.data.event_summary import EventSummary
-
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,6 +20,7 @@ if TYPE_CHECKING:
     from .data.device import Device
     from .data.event import Event
     from .data.event_store import EventStore
+    from .data.event_summary import EventSummary
 
 
 ENTITY_DESCRIPTION = BinarySensorEntityDescription(
@@ -110,5 +109,3 @@ class OnlyCatEventSensor(BinarySensorEntity):
             if subevent.action:
                 self._attr_extra_state_attributes["action"] = subevent.action
         self.async_write_ha_state()
-
-
