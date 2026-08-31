@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .data.device import Device
     from .data.event import Event
     from .data.event_store import EventStore
+    from .data.event_summary import EventSummary
 
 
 ENTITY_DESCRIPTION = BinarySensorEntityDescription(
@@ -63,6 +64,9 @@ class OnlyCatEventSensor(BinarySensorEntity):
         self._event_store.add_event_listener(
             self.device.device_id, self.on_event_update
         )
+        self._event_store.add_event_summary_listener(
+            self.device.device_id, self.on_event_summary_update
+        )
 
     async def on_event_update(self, event: Event) -> None:
         """Handle event update."""
@@ -89,4 +93,19 @@ class OnlyCatEventSensor(BinarySensorEntity):
         if event.frame_count:
             # Frame count is present, event is concluded
             self._attr_is_on = False
+        self.async_write_ha_state()
+
+    async def on_event_summary_update(self, summary: EventSummary) -> None:
+        """Handle event summary update."""
+        if not summary:
+            return
+        if (self._attr_extra_state_attributes.get("eventId")) != summary.event_id:
+            return
+        for subevent in summary.subevents:
+            if subevent.rfid_code:
+                self._attr_extra_state_attributes["rfidCode"] = subevent.rfid_code
+            if subevent.direction:
+                self._attr_extra_state_attributes["direction"] = subevent.direction
+            if subevent.action:
+                self._attr_extra_state_attributes["action"] = subevent.action
         self.async_write_ha_state()

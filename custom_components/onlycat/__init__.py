@@ -44,7 +44,7 @@ async def async_setup_entry(
 ) -> bool:
     """Set up this integration using UI."""
     client = OnlyCatApiClient(
-        token=entry.data["token"], session=async_get_clientsession(hass)
+        api_key=entry.data["api_key"], session=async_get_clientsession(hass)
     )
     entry.runtime_data = OnlyCatData(
         client=client,
@@ -183,6 +183,7 @@ async def async_unload_entry(
 ) -> bool:
     """Handle removal of an entry."""
     await entry.runtime_data.client.disconnect()
+    entry.runtime_data.client.clear_event_listeners()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
@@ -203,17 +204,17 @@ async def async_migrate_entry(
         config_entry.version,
         config_entry.minor_version,
     )
-    if config_entry.version == 1 and "settings" in config_entry.data:
-        return True
-    if "settings" not in config_entry.data:
-        new_data = {**config_entry.data}
+    new_data = {**config_entry.data}
+    if config_entry.version == 1 and "settings" not in config_entry.data:
         default_settings = {
             "ignore_flap_motion_rules": False,
             "ignore_motion_sensor_rules": False,
             "poll_interval_hours": 1,
         }
         new_data["settings"] = default_settings
+    if "api_key" not in config_entry.data and "token" in config_entry.data:
+        new_data["api_key"] = new_data.pop("token")
     hass.config_entries.async_update_entry(
-        config_entry, data=new_data, minor_version=1, version=2
+        config_entry, data=new_data, minor_version=1, version=3
     )
     return True

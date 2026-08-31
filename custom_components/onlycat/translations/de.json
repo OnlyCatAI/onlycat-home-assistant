@@ -4,7 +4,7 @@
             "user": {
                 "description": "Erstelle einen API-Schlüssel in der OnlyCat App unter Konto > API-Schlüssel.",
                 "data": {
-                    "token": "OnlyCat API-Schlüssel"
+                    "api_key": "OnlyCat API-Schlüssel"
                 }
             },
             "reconfigure": {
@@ -18,7 +18,7 @@
             }
         },
         "error": {
-            "auth": "Token falsch.",
+            "auth": "API Key falsch.",
             "connection": "Konnte nicht mit der API verbinden.",
             "unknown": "Unbekannter Fehler."
         },

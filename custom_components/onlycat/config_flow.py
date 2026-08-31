@@ -32,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for OnlyCat."""
 
-    VERSION = 2
+    VERSION = 3
 
     async def async_step_user(
         self,
@@ -82,7 +82,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 return_data = {
                     "user_id": user_id,
-                    "token": user_input[CONF_ACCESS_TOKEN],
+                    "api_key": user_input[CONF_ACCESS_TOKEN],
                     "settings": settings,
                 }
                 return self.async_create_entry(
@@ -167,7 +167,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 unique_id=config_entry.unique_id,
                 data={
                     "user_id": config_entry.data["user_id"],
-                    "token": config_entry.data["token"],
+                    "api_key": config_entry.data["api_key"],
                     "settings": settings,
                 },
             )
@@ -217,6 +217,6 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             and "code" in response
             and response["code"] == ONLYCAT_API_STATUS_CODES["UNAUTHORIZED"]
         ):
-            error_msg = "Invalid access token"
+            error_msg = "Invalid API key"
             raise OnlyCatApiClientAuthenticationError(error_msg)
         await client.disconnect()
