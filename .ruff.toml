@@ -14,6 +14,7 @@ ignore = [
     "COM812", # incompatible with formatter
     "ISC001", # incompatible with formatter
     "S101", # Allow assert, especially for tests
+    "CPY001", # LICENSE is valid for the whole repository content
 ]
 
 [lint.per-file-ignores]
