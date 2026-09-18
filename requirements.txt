@@ -4,7 +4,7 @@ pip>=26.2.1
 ruff==0.16.5
 pytest==9.1.1
 pytest-asyncio==1.4.0
-python-socketio==5.16.4
+python-socketio==5.17.0
 pycares==5.0.1
 jsonschema==4.26.0
 debugpy
