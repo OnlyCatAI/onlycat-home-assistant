@@ -170,7 +170,8 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
                 try:
                     pet.last_seen = datetime.fromisoformat(
                         last_seen.get(
-                            "eventTimestamp", datetime.min.replace(tzinfo=UTC).isoformat()
+                            "eventTimestamp",
+                            datetime.min.replace(tzinfo=UTC).isoformat(),
                         )
                     )
                 except (TypeError, ValueError):
