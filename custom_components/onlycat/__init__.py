@@ -167,11 +167,14 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             pet.label = label
             if rfid_code in last_seen_rfids:
                 last_seen = last_seen_rfids[rfid_code]
-                pet.last_seen = datetime.fromisoformat(
-                    last_seen.get(
-                        "eventTimestamp", datetime.min.replace(tzinfo=UTC).isoformat()
+                try:
+                    pet.last_seen = datetime.fromisoformat(
+                        last_seen.get(
+                            "eventTimestamp", datetime.min.replace(tzinfo=UTC).isoformat()
+                        )
                     )
-                )
+                except (TypeError, ValueError):
+                    pet.last_seen = datetime.min.replace(tzinfo=UTC)
                 pet.update_from_subevent(
                     SubEvent.from_api_response(last_seen.get("lastSubevent", None))
                 )
