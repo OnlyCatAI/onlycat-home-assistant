@@ -3,7 +3,7 @@ homeassistant==2026.10.1
 pip>=26.2.2
 ruff==0.17.2
 pytest==9.1.1
-pytest-asyncio==1.4.1
+pytest-asyncio==1.4.1.post1
 pycares==5.2.1
 python-socketio==5.17.0
 jsonschema==4.26.0
