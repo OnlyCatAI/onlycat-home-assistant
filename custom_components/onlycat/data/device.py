@@ -13,6 +13,8 @@ from .policy import PolicyResult
 from .type import Type
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from custom_components.onlycat.data import OnlyCatConfigEntry
 
     from .event import Event
@@ -182,7 +184,7 @@ class Device:
         self.device_transit_policies.update(
             {transit_policy.device_transit_policy_id: transit_policy}
         )
-        for listener in self._policy_update_listeners:
+        for listener in list(self._policy_update_listeners):
             listener()
 
     async def update_device_transit_policy_from_api(self, data: dict) -> None:
@@ -190,6 +192,12 @@ class Device:
         transit_policy = DeviceTransitPolicy.from_api_response(data, self)
         await self.update_device_transit_policy(transit_policy)
 
-    def add_policy_update_listener(self, listener: callable) -> None:
-        """Add a listener to be called when the device transit policy is updated."""
+    def add_policy_update_listener(self, listener: Callable) -> Callable[[], None]:
+        """Add a listener for transit policy updates, return function to remove it."""
         self._policy_update_listeners.append(listener)
+
+        def remove_listener() -> None:
+            if listener in self._policy_update_listeners:
+                self._policy_update_listeners.remove(listener)
+
+        return remove_listener

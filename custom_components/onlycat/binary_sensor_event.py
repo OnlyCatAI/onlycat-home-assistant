@@ -61,11 +61,18 @@ class OnlyCatEventSensor(BinarySensorEntity):
         self._event_store = event_store
         self.entity_id = "binary_sensor." + self._attr_unique_id
 
-        self._event_store.add_event_listener(
-            self.device.device_id, self.on_event_update
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to updates once the entity has been added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._event_store.add_event_listener(
+                self.device.device_id, self.on_event_update
+            )
         )
-        self._event_store.add_event_summary_listener(
-            self.device.device_id, self.on_event_summary_update
+        self.async_on_remove(
+            self._event_store.add_event_summary_listener(
+                self.device.device_id, self.on_event_summary_update
+            )
         )
 
     async def on_event_update(self, event: Event) -> None:

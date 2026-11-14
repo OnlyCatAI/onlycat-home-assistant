@@ -96,8 +96,13 @@ class OnlyCatPolicySelect(CoordinatorEntity, SelectEntity):
         self._policies = device.device_transit_policies
         if device.device_transit_policy_id is not None:
             self.set_current_policy(device.device_transit_policy_id)
-        api_client.add_event_listener("deviceUpdate", self.on_device_update)
-        self.coordinator.async_add_listener(self._handle_coordinator_update)
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to updates once the entity has been added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._api_client.add_event_listener("deviceUpdate", self.on_device_update)
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:

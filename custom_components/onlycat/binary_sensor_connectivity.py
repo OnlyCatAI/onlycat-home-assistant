@@ -59,9 +59,15 @@ class OnlyCatConnectionSensor(BinarySensorEntity):
         self._attr_unique_id = (
             device.device_id.replace("-", "_").lower() + "_connectivity"
         )
+        self._api_client = api_client
         self.entity_id = "binary_sensor." + self._attr_unique_id
 
-        api_client.add_event_listener("deviceUpdate", self.on_device_update)
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to updates once the entity has been added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._api_client.add_event_listener("deviceUpdate", self.on_device_update)
+        )
 
     async def on_device_update(self, data: dict) -> None:
         """Handle device update event."""

@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.onlycat.data.event import Event
 from custom_components.onlycat.data.event_store import EventStore
+from custom_components.onlycat.data.pet import Pet
 
 
 @pytest.mark.asyncio
@@ -108,3 +109,50 @@ async def test_run_listeners_never_calls_with_none() -> None:
         # Verify the argument was never None in any call
         for c in listener.call_args_list:
             assert c != call(None), "Listener must never be called with None"
+
+
+@pytest.mark.asyncio
+async def test_remove_listeners() -> None:
+    """Test that the functions returned by add_*_listener remove the listener."""
+    store = EventStore(api_client=AsyncMock())
+    device_id = "OC-TEST-123"
+    rfid_code = "RFID-1"
+    store._current_events[device_id] = Event(device_id=device_id, event_id=1)  # noqa: SLF001
+    store.add_pet(Pet(rfid_code=rfid_code, location="home", last_seen=None))
+    event_listener = AsyncMock()
+    pet_listener = AsyncMock()
+
+    remove_event_listener = store.add_event_listener(device_id, event_listener)
+    remove_pet_listener = store.add_pet_listener(rfid_code, pet_listener)
+    remove_event_listener()
+    remove_pet_listener()
+    # Removing twice must be a no-op
+    remove_event_listener()
+    remove_pet_listener()
+
+    await store.run_event_listeners(device_id)
+    await store.run_pet_listeners(rfid_code)
+
+    event_listener.assert_not_called()
+    pet_listener.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_listener_removed_during_run() -> None:
+    """Test that a listener removing itself while running does not skip others."""
+    store = EventStore(api_client=AsyncMock())
+    device_id = "OC-TEST-123"
+    event = Event(device_id=device_id, event_id=1)
+    store._current_events[device_id] = event  # noqa: SLF001
+    remove_first = None
+
+    async def first_listener(_: Event) -> None:
+        remove_first()
+
+    second_listener = AsyncMock()
+    remove_first = store.add_event_listener(device_id, first_listener)
+    store.add_event_listener(device_id, second_listener)
+
+    await store.run_event_listeners(device_id)
+
+    second_listener.assert_called_once_with(event)
