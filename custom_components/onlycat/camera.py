@@ -174,7 +174,7 @@ class OnlyCatLastVideo(Camera):
         else:
             if hasattr(self, "stream") and self.stream:
                 with contextlib.suppress(Exception):
-                    self.stream.stop()
+                    await self.stream.stop()
                 self.stream = None
             self._current_event = event
             self.async_write_ha_state()
