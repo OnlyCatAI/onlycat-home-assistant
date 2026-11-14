@@ -77,9 +77,6 @@ class OnlyCatLastImage(ImageEntity):
         self.entity_id = "image." + self._attr_unique_id
         self._attr_image_url: str = ""
         self._cached_image: bytes | None = None
-        self._event_store.add_event_listener(
-            self.device.device_id, self.on_event_update
-        )
 
     async def async_image(self) -> bytes | None:
         """Return the cached image from eventstore."""
@@ -108,6 +105,15 @@ class OnlyCatLastImage(ImageEntity):
                         self.device.device_id, image, self._current_event.event_id
                     )
         return image
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to updates once the entity has been added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._event_store.add_event_listener(
+                self.device.device_id, self.on_event_update
+            )
+        )
 
     async def on_event_update(self, event: Event) -> None:
         """Handle event update."""

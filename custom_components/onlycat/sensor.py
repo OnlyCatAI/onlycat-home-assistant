@@ -93,8 +93,16 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
         self.policy_id = policy_id
         self.policy = policy
         self.device: Device = device
-        self.coordinator.async_add_listener(self.update_sensor)
-        self.device.add_policy_update_listener(self.update_sensor)
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to updates once the entity has been added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(self.device.add_policy_update_listener(self.update_sensor))
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.update_sensor()
 
     @callback
     def update_sensor(self) -> None:

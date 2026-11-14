@@ -70,7 +70,6 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         self.entity_id = "device_tracker." + self._attr_unique_id
         self._attr_in_zones = ["zone.home"] if pet.location == STATE_HOME else []
         self._attr_last_seen = pet.last_seen
-        self._event_store.add_pet_listener(pet.rfid_code, self.on_pet_update)
 
     @property
     def extra_state_attributes(self) -> dict[str, str] | None:
@@ -80,8 +79,11 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
         return {"last_seen": self._attr_last_seen.isoformat()}
 
     async def async_added_to_hass(self) -> None:
-        """Restore the previous location if it is more recent than the API state."""
+        """Subscribe to pet updates and restore a more recent previous location."""
         await super().async_added_to_hass()
+        self.async_on_remove(
+            self._event_store.add_pet_listener(self.pet.rfid_code, self.on_pet_update)
+        )
         last_state = await self.async_get_last_state()
         if last_state is None or last_state.state not in (
             STATE_HOME,

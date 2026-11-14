@@ -4,6 +4,8 @@
 ### Changes
 - Make reading eventTimestamp more robust for https://github.com/OnlyCatAI/onlycat-home-assistant/issues/198
 - Cache camera preview and image based on event id (https://github.com/OnlyCatAI/onlycat-home-assistant/issues/211)
+- Fix await for async call on stream.stop (https://github.com/OnlyCatAI/onlycat-home-assistant/issues/218)
+- Register entity listeners only once the entity is added to hass and remove them again on removal. Fixes `hass is None` errors and failed setups with disabled entities (https://github.com/OnlyCatAI/onlycat-home-assistant/issues/114)
 ### Update dependencies
 - Bump build and test dependencies
 - Update testing to 2026.10.1

@@ -147,7 +147,7 @@ class EventStore:
             return
         event = self._current_events.get(device_id, None)
         if event is not None:
-            for callback in self._event_update_listeners[device_id]:
+            for callback in list(self._event_update_listeners[device_id]):
                 await callback(event)
 
     async def run_summary_listeners(self, device_id: str) -> None:
@@ -156,7 +156,7 @@ class EventStore:
             return
         summary = self._current_summaries.get(device_id, None)
         if summary is not None:
-            for callback in self._event_summary_update_listeners[device_id]:
+            for callback in list(self._event_summary_update_listeners[device_id]):
                 await callback(summary)
 
     async def run_pet_listeners(self, rfid_code: str) -> None:
@@ -165,26 +165,26 @@ class EventStore:
             return
         pet = self.get_pet_by_rfid(rfid_code)
         if pet is not None:
-            for callback in self._pet_update_listeners[rfid_code]:
+            for callback in list(self._pet_update_listeners[rfid_code]):
                 await callback(pet)
 
-    def add_event_listener(self, device_id: str, callback: Callable) -> None:
-        """Add function to a devices listener list."""
-        if device_id not in self._event_update_listeners:
-            self._event_update_listeners[device_id] = []
-        self._event_update_listeners[device_id].append(callback)
+    def add_event_listener(
+        self, device_id: str, callback: Callable
+    ) -> Callable[[], None]:
+        """Add function to a devices listener list, return function to remove it."""
+        return _add_listener(self._event_update_listeners, device_id, callback)
 
-    def add_event_summary_listener(self, device_id: str, callback: Callable) -> None:
-        """Add function to a devices event summary listener list."""
-        if device_id not in self._event_summary_update_listeners:
-            self._event_summary_update_listeners[device_id] = []
-        self._event_summary_update_listeners[device_id].append(callback)
+    def add_event_summary_listener(
+        self, device_id: str, callback: Callable
+    ) -> Callable[[], None]:
+        """Add function to a devices event summary listener list, return remover."""
+        return _add_listener(self._event_summary_update_listeners, device_id, callback)
 
-    def add_pet_listener(self, rfid_code: str, callback: Callable) -> None:
-        """Add function to a pets listener list."""
-        if rfid_code not in self._pet_update_listeners:
-            self._pet_update_listeners[rfid_code] = []
-        self._pet_update_listeners[rfid_code].append(callback)
+    def add_pet_listener(
+        self, rfid_code: str, callback: Callable
+    ) -> Callable[[], None]:
+        """Add function to a pets listener list, return function to remove it."""
+        return _add_listener(self._pet_update_listeners, rfid_code, callback)
 
     def get_current_image(self, device_id: str) -> tuple[int | None, bytes | None]:
         """Return cached image for given device."""
@@ -211,3 +211,17 @@ class EventStore:
     def get_pets(self) -> list[Pet]:
         """Return list of all pets in store."""
         return list(self._pets.values())
+
+
+def _add_listener(
+    listeners: dict[str, list[Callable]], key: str, callback: Callable
+) -> Callable[[], None]:
+    """Register callback under key and return a function that removes it again."""
+    key_listeners = listeners.setdefault(key, [])
+    key_listeners.append(callback)
+
+    def remove_listener() -> None:
+        if callback in key_listeners:
+            key_listeners.remove(callback)
+
+    return remove_listener

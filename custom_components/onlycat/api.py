@@ -7,6 +7,8 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import aiohttp
 
     from .data import OnlyCatData
@@ -83,12 +85,19 @@ class OnlyCatApiClient:
         await self._socket.disconnect()
         await self._socket.shutdown()
 
-    def add_event_listener(self, event: str, callback: Any) -> None:
-        """Add an event listener."""
-        self._listeners[event].append(callback)
+    def add_event_listener(self, event: str, callback: Any) -> Callable[[], None]:
+        """Add an event listener, return a function that removes it again."""
+        listeners = self._listeners[event]
+        listeners.append(callback)
         _LOGGER.debug(
             "Added event listener for event %s: %s", event, callback.__module__
         )
+
+        def remove_listener() -> None:
+            if callback in listeners:
+                listeners.remove(callback)
+
+        return remove_listener
 
     def clear_event_listeners(self) -> None:
         """Clear all event listeners."""
@@ -97,7 +106,7 @@ class OnlyCatApiClient:
     async def handle_event(self, event: str, *args: Any) -> None:
         """Handle an event."""
         _LOGGER.debug("Received event: %s with args: %s", event, args)
-        for callback in self._listeners[event]:
+        for callback in list(self._listeners[event]):
             try:
                 await callback(*args)
             except Exception:
@@ -123,7 +132,7 @@ class OnlyCatApiClient:
         _LOGGER.debug("Received reply for event %s: %s", event, reply)
         if reply is None:
             return None
-        for callback in self._listeners[event]:
+        for callback in list(self._listeners[event]):
             try:
                 await callback(reply)
             except Exception:
