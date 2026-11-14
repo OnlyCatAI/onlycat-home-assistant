@@ -5,6 +5,6 @@ ruff==0.17.3
 pytest==9.2.0
 pytest-asyncio==1.4.1.post1
 pycares==5.2.1
-python-socketio==5.18.0
+python-socketio==5.18.1
 jsonschema==4.26.0
 debugpy
