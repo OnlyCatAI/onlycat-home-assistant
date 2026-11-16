@@ -77,9 +77,10 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
                     data[device.device_id][
                         "metrics"
                     ] = await self.config_entry.runtime_data.client.send_message(
-                        "getDeviceTelemetryMetrics",
+                        "getDeviceTelemetry",
                         {
                             "deviceId": device.device_id,
+                            "limit": 1,
                         },
                     )
                 except TimeoutError:
