@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
 import logging
+import math
 from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -65,8 +66,10 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
                     {
                         "deviceId": device.device_id,
                         "limit": 100,
-                        "hours": self.config_entry.data["settings"].get(
-                            "poll_interval_hours", 1
+                        "hours": math.ceil(
+                            self.config_entry.data["settings"].get(
+                                "poll_interval_hours", 1
+                            )
                         ),
                     },
                 )

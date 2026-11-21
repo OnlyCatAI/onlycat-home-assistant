@@ -4,6 +4,7 @@
 ### Changes
 - Detailed metrics now come from `getDeviceTelemetry` with `limit: 1` instead of `getDeviceTelemetryMetrics`, which is deprecated. Each poll now fetches one sample per device instead of several hours of every measure.
 - The metric attributes on the device-errors sensor keep their names. They are now all taken from the device's latest telemetry sample, so a measure the device did not send in that sample is absent rather than carried over from an earlier one.
+- The polling interval for error and metric sensors can now be set as low as 15 minutes (`0.25` hours), in steps of 15 minutes. Reboot logs are still requested in whole hours, so at intervals below 1 hour the error sensor stays on for up to 1 hour after a reboot.
 
 ## v2.0.8
 ### Changes
