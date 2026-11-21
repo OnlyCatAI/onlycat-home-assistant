@@ -121,9 +121,9 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 1),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
-                            min=1,
+                            min=0.25,
                             max=24,
-                            step=1,
+                            step=0.25,
                         )
                     ),
                     vol.Optional(
@@ -192,9 +192,9 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 6),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
-                            min=1,
+                            min=0.25,
                             max=24,
-                            step=1,
+                            step=0.25,
                         )
                     ),
                     vol.Optional(

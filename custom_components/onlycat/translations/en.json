@@ -8,7 +8,7 @@
                     "ignore_flap_motion_rules": "Ignore rules based on flap motion",
                     "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
                     "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more attributes to error-sensor)",
-                    "poll_interval_hours": "Polling interval in hours for error and metroc sensors"
+                    "poll_interval_hours": "Polling interval in hours for error and metric sensors (0.25 = 15 minutes)"
                 }
             },
             "reconfigure": {
@@ -17,7 +17,7 @@
                     "ignore_flap_motion_rules": "Ignore rules based on flap motion",
                     "ignore_motion_sensor_rules": "Ignore rules based on motion sensor",
                     "enable_detailed_metrics": "Enable detailed metrics (adds ~50 more attributes to error-sensor)",
-                    "poll_interval_hours": "Polling interval in hours for error and metroc sensors"
+                    "poll_interval_hours": "Polling interval in hours for error and metric sensors (0.25 = 15 minutes)"
                 }
             }
         },
