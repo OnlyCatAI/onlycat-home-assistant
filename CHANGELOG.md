@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.0.10
+### Changes
+- Detailed metrics now come from `getDeviceTelemetry` with `limit: 1` instead of `getDeviceTelemetryMetrics`, which is deprecated. Each poll now fetches one sample per device instead of several hours of every measure.
+- The metric attributes on the device-errors sensor keep their names. They are now all taken from the device's latest telemetry sample, so a measure the device did not send in that sample is absent rather than carried over from an earlier one.
+
 ## v2.0.8
 ### Changes
 - Make reading eventTimestamp more robust for https://github.com/OnlyCatAI/onlycat-home-assistant/issues/198
