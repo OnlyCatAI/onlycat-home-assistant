@@ -32,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for OnlyCat."""
 
-    VERSION = 3
+    VERSION = 4
 
     async def async_step_user(
         self,

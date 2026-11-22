@@ -1,11 +1,12 @@
 """Tests for OnlyCat/__init.py."""
 
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.onlycat import _initialize_devices
+from custom_components.onlycat import _initialize_devices, _tracker_entity_id_update
 
 get_devices = [
     # "Normal device"
@@ -130,3 +131,45 @@ async def test_initialize_devices() -> None:
             "getDevice", {"deviceId": device_id, "subscribe": True}
         )
     assert mock_entry.runtime_data.devices[1].device_transit_policy_id is None
+
+
+@pytest.mark.parametrize(
+    ("domain", "unique_id", "entity_id", "taken", "expected"),
+    [
+        # Default tracker
+        (
+            "device_tracker",
+            "756098800023974_tracker",
+            "device_tracker.756098800023974_tracker",
+            False,
+            {"new_entity_id": "device_tracker.onlycat_756098800023974"},
+        ),
+        # Legacy RFID code that is not valid in an entity ID
+        (
+            "device_tracker",
+            "15.07_tracker",
+            "device_tracker.15_07_tracker",
+            False,
+            {"new_entity_id": "device_tracker.onlycat_15_07"},
+        ),
+        # Entity ID changed by the user
+        ("device_tracker", "7_tracker", "device_tracker.minna", False, None),
+        # Target entity ID already in use
+        ("device_tracker", "7_tracker", "device_tracker.7_tracker", True, None),
+        # Not a pet tracker
+        ("sensor", "7_tracker", "sensor.7_tracker", False, None),
+    ],
+)
+def test_tracker_entity_id_update(
+    domain: str,
+    unique_id: str,
+    entity_id: str,
+    taken: bool,  # noqa: FBT001
+    expected: dict[str, str] | None,
+) -> None:
+    """Test which trackers are renamed by the migration."""
+    entity_registry = MagicMock()
+    entity_registry.async_is_registered.return_value = taken
+    entry = SimpleNamespace(domain=domain, unique_id=unique_id, entity_id=entity_id)
+
+    assert _tracker_entity_id_update(entity_registry, entry) == expected
