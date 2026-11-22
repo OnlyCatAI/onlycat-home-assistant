@@ -12,7 +12,9 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util import slugify
 
 from .api import OnlyCatApiClient
 from .coordinator import OnlyCatDataUpdateCoordinator
@@ -35,6 +37,7 @@ PLATFORMS: list[Platform] = [
     Platform.CAMERA,
 ]
 _LOGGER = logging.getLogger(__name__)
+TRACKER_RENAME_VERSION = 4
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
@@ -199,6 +202,21 @@ async def async_reload_entry(
     await hass.config_entries.async_reload(entry.entry_id)
 
 
+def _tracker_entity_id_update(
+    entity_registry: er.EntityRegistry, entry: er.RegistryEntry
+) -> dict[str, str] | None:
+    """Return the update renaming a default tracker to onlycat_<rfid>."""
+    if entry.domain != "device_tracker" or not entry.unique_id.endswith("_tracker"):
+        return None
+    if entry.entity_id != f"device_tracker.{slugify(entry.unique_id)}":
+        return None
+    rfid_code = entry.unique_id.removesuffix("_tracker")
+    new_entity_id = f"device_tracker.onlycat_{slugify(rfid_code)}"
+    if entity_registry.async_is_registered(new_entity_id):
+        return None
+    return {"new_entity_id": new_entity_id}
+
+
 async def async_migrate_entry(
     hass: HomeAssistant, config_entry: OnlyCatConfigEntry
 ) -> bool:
@@ -218,7 +236,14 @@ async def async_migrate_entry(
         new_data["settings"] = default_settings
     if "api_key" not in config_entry.data and "token" in config_entry.data:
         new_data["api_key"] = new_data.pop("token")
+    if config_entry.version < TRACKER_RENAME_VERSION:
+        entity_registry = er.async_get(hass)
+        await er.async_migrate_entries(
+            hass,
+            config_entry.entry_id,
+            lambda entry: _tracker_entity_id_update(entity_registry, entry),
+        )
     hass.config_entries.async_update_entry(
-        config_entry, data=new_data, minor_version=1, version=3
+        config_entry, data=new_data, minor_version=1, version=4
     )
     return True

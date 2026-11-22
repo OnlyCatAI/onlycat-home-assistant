@@ -13,6 +13,7 @@ from homeassistant.components.device_tracker import (
 )
 from homeassistant.const import STATE_HOME, STATE_NOT_HOME
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.util import slugify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ class OnlyCatPetTracker(TrackerEntity, RestoreEntity):
             "pet_name": self.pet_name,
         }
         self._attr_unique_id = pet.rfid_code + "_tracker"
-        self.entity_id = "device_tracker." + self._attr_unique_id
+        self.entity_id = "device_tracker.onlycat_" + slugify(pet.rfid_code)
         self._attr_in_zones = ["zone.home"] if pet.location == STATE_HOME else []
         self._attr_last_seen = pet.last_seen
 

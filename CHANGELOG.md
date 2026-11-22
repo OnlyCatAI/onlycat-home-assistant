@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.11
+### Breaking changes
+- Pet tracker entity IDs change from `device_tracker.<rfid>_tracker` to `device_tracker.onlycat_<rfid>`, as IDs starting with a number cause problems. Existing trackers are renamed automatically and keep their settings and history. Automations, scripts and dashboards using the old IDs must be updated. Entity IDs you changed yourself are not touched.
+
 ## v2.0.10
 ### Changes
 - Detailed metrics now come from `getDeviceTelemetry` with `limit: 1` instead of `getDeviceTelemetryMetrics`, which is deprecated. Each poll now fetches one sample per device instead of several hours of every measure.
