@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.11
+## v2.1.0
 ### Breaking changes
 - Pet tracker entity IDs change from `device_tracker.<rfid>_tracker` to `device_tracker.onlycat_<rfid>`, as IDs starting with a number cause problems. Existing trackers are renamed automatically and keep their settings and history. Automations, scripts and dashboards using the old IDs must be updated. Entity IDs you changed yourself are not touched.
 
